@@ -1,0 +1,15 @@
+{
+  "name": "happynet-finance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Happynet Profit First Dashboard \u2014 Netlify Functions + Supabase backend",
+  "scripts": {
+    "start": "netlify dev",
+    "dev": "netlify dev",
+    "audit": "node scripts/hfms-audit.mjs",
+    "check": "node scripts/hfms-audit.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}
