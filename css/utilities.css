@@ -1,0 +1,87 @@
+/* ============================================================================
+   HAPPYNET — Utilities & Responsive Styles
+   ============================================================================ */
+
+/* Mobile Tabs */
+.mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 880px) {
+  .sidebar {
+    display: none;
+  }
+  .main {
+    padding: 18px 16px 90px;
+  }
+  .mobile-tabs {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--ink);
+    z-index: 50;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    overflow-x: auto;
+    gap: 2px;
+  }
+  .mobile-tabs button {
+    all: unset;
+    flex: 1;
+    min-width: 64px;
+    text-align: center;
+    color: #B7AE99;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 8px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .mobile-tabs button.active {
+    background: var(--gold);
+    color: var(--ink);
+  }
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .topbar {
+    flex-direction: column;
+  }
+}
+
+/* Quick FAB (hidden by default) */
+.quick-fab {
+  display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .main {
+    padding: 18px 16px 90px;
+  }
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+  .security-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .security-grid {
+    grid-template-columns: 1fr;
+  }
+  .system-strip .system-brand {
+    width: 100%;
+  }
+  .system-strip .quick {
+    flex: 1;
+  }
+}

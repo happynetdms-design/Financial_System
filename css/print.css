@@ -1,0 +1,42 @@
+/* ============================================================================
+   HAPPYNET — Print Styles
+   ============================================================================ */
+
+/* Phase 5: "Print Monthly Report" reuses the browser's Save-as-PDF —
+   no new library, just hides the app chrome and lets the dashboard
+   content print cleanly. */
+
+@media print {
+  .sidebar,
+  .mobile-tabs,
+  .no-print {
+    display: none !important;
+  }
+
+  .main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .card,
+  .pf-bucket,
+  .kpi {
+    break-inside: avoid;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .report-sheet {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .toolbar,
+  form button,
+  .form-card,
+  [id^="btn-"] {
+    display: none !important;
+  }
+}

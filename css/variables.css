@@ -1,0 +1,36 @@
+/* ============================================================================
+   HAPPYNET — CSS Variables & Design Tokens
+   ============================================================================ */
+
+:root {
+  /* Primary Colors */
+  --ink: #132339;
+  --ink-soft: #3B4B63;
+  --paper: #F5F1E7;
+  --card: #FFFDF8;
+  
+  /* Accent Colors */
+  --gold: #D9A441;
+  --gold-deep: #B9822B;
+  
+  /* Status Colors */
+  --good: #2F7A5C;
+  --good-soft: #E4EFE8;
+  --alert: #B23A2E;
+  --alert-soft: #F5E4E1;
+  
+  /* Neutral & Borders */
+  --hair: #DED5C0;
+  --muted: #7A7261;
+  
+  /* Components */
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(19, 35, 57, 0.04), 0 6px 20px rgba(19, 35, 57, 0.06);
+  
+  /* Enterprise Phase 24 */
+  --navy: #0d1b2a;
+  --navy-2: #152a40;
+  --line: rgba(19, 35, 57, 0.10);
+  --glass: rgba(255, 253, 248, 0.78);
+  --focus: rgba(217, 164, 65, 0.28);
+}

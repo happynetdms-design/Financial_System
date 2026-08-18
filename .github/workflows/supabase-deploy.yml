@@ -1,0 +1,31 @@
+name: Deploy to Supabase
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/cli-action@v1
+        with:
+          version: latest
+
+      - name: Authenticate Supabase CLI
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase login --token "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Push DB schema / migrations
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          # Push local schema/migrations to the Supabase project.
+          # This expects your SQL/migrations to live under the `supabase/` directory.
+          supabase db push --project-ref "$SUPABASE_PROJECT_REF" --yes
