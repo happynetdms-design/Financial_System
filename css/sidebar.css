@@ -2,6 +2,7 @@
    HAPPYNET — Sidebar & Navigation
    ============================================================================ */
 
+/* Updated Sidebar Container */
 .sidebar {
   width: 240px;
   flex-shrink: 0;
@@ -10,10 +11,34 @@
   display: flex;
   flex-direction: column;
   padding: 22px 16px;
-  position: sticky;
+  
+  /* Fixed height & independent scrolling */
+  position: fixed;
   top: 0;
+  left: 0;
   height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+  
   border-right: 1px solid rgba(217, 164, 65, 0.12);
+}
+
+/* Styled Scrollbar for Sidebar */
+.sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
 }
 
 /* Brand / Logo */
