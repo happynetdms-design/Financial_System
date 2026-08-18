@@ -86,7 +86,29 @@
 nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
+}
+
+/* Navigation Section */
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 6px;
+}
+
+.nav-section:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nav-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8C93A6;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 12px 4px 12px;
+  margin-bottom: 2px;
 }
 
 nav button {
