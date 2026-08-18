@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- 1. MUST BE LOADED FIRST -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Stylesheets -->
 <link rel="stylesheet" href="/css/variables.css">
 <link rel="stylesheet" href="/css/base.css">
@@ -190,16 +192,39 @@ async function apiSaveBranchMisc(branchId, data){
 
 
 let supabaseClient;
-async function loadSupabaseClient(){
-  if(supabaseClient) return supabaseClient;
+
+async function loadSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+
+  // Wait briefly if window.supabase is still loading from CDN
+  let retries = 0;
+  while ((!window.supabase || typeof window.supabase.createClient !== 'function') && retries < 10) {
+    await new Promise(resolve => setTimeout(resolve, 150));
+    retries++;
+  }
+
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    throw new Error('Supabase SDK script failed to load. Check your index.html script tags.');
+  }
+
   const res = await fetch('/api/auth-config');
-  if(!res.ok) throw new Error('Unable to load Supabase config.');
+  if (!res.ok) throw new Error('Unable to load Supabase config.');
+  
   const data = await res.json();
-  if(!data.SUPABASE_URL || !data.SUPABASE_ANON_KEY) throw new Error('Supabase client config is missing.');
+  if (!data.SUPABASE_URL || !data.SUPABASE_ANON_KEY) {
+    throw new Error('Supabase client config is missing.');
+  }
+
   supabaseClient = window.supabase.createClient(data.SUPABASE_URL, data.SUPABASE_ANON_KEY, {
-    auth: { autoRefreshToken:false, persistSession:false }
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
   });
+
   return supabaseClient;
+}
 }
 
 async function handleOAuthCallback(){
