@@ -165,68 +165,101 @@ async function apiSaveBranchMisc(branchId, data){
 
 
 let supabaseClient;
-async function loadSupabaseClient(){
-  if(supabaseClient) return supabaseClient;
+
+async function loadSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+
   const res = await fetch('/api/auth-config');
-  if(!res.ok) throw new Error('Unable to load Supabase config.');
+  if (!res.ok) throw new Error('Unable to load Supabase config.');
+
   const data = await res.json();
-  if(!data.SUPABASE_URL || !data.SUPABASE_ANON_KEY) throw new Error('Supabase client config is missing.');
+  if (!data.SUPABASE_URL || !data.SUPABASE_ANON_KEY) {
+    throw new Error('Supabase client config is missing.');
+  }
+
+  // Set persistSession: true (default) so PKCE code verifiers persist across redirects
   supabaseClient = window.supabase.createClient(data.SUPABASE_URL, data.SUPABASE_ANON_KEY, {
-    auth: { autoRefreshToken:false, persistSession:false }
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true
+    }
   });
+
   return supabaseClient;
 }
 
-async function handleOAuthCallback(){
-  try{
+async function handleOAuthCallback() {
+  try {
     const supabase = await loadSupabaseClient();
-    const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession:false });
-    if(error){
-      console.warn('OAuth callback:', error.message || error);
-      return false;
+    
+    // Check if Google redirected back with an authorization code
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+
+    if (code) {
+      // Exchange PKCE Auth Code for Session
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+      if (error) {
+        console.warn('OAuth callback error:', error.message || error);
+        return false;
+      }
+
+      if (data && data.session) {
+        const { access_token, refresh_token, expires_at, user } = data.session;
+
+        setSession({
+          access_token,
+          refresh_token,
+          expires_at,
+          user: { id: user.id, email: user.email, role: 'viewer' }
+        });
+
+        // Clean up code query parameter from browser address bar
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return true;
+      }
     }
-    if(data && data.session){
-      const { access_token, refresh_token, expires_at, user } = data.session;
-      setSession({
-        access_token,
-        refresh_token,
-        expires_at,
-        user: { id: user.id, email: user.email, role: 'viewer' }
-      });
-      window.history.replaceState({}, '', window.location.pathname);
-      return true;
-    }
-  }catch(e){
+  } catch (e) {
     console.warn('OAuth callback failed', e);
   }
+
   return false;
 }
 
-async function signInWithGoogle(){
+async function signInWithGoogle() {
   const googleBtn = document.getElementById('google-signin');
-  if(!googleBtn) return;
+  if (!googleBtn) return;
+
   const originalLabel = googleBtn.innerHTML;
   googleBtn.disabled = true;
   googleBtn.innerHTML = 'Redirecting…';
-  try{
+
+  try {
     const supabase = await loadSupabaseClient();
+
+    // Initiate Google OAuth flow targeting current origin
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: {
+        redirectTo: window.location.origin
+      }
     });
-    if(error) throw error;
-    if(data && data.url){
-      window.location = data.url;
+
+    if (error) throw error;
+
+    if (data && data.url) {
+      window.location.href = data.url;
       return;
     }
+
     throw new Error('Unable to start Google sign-in.');
-  }catch(e){
-    alert('Google sign-in failed: '+(e.message || e));
+  } catch (e) {
+    alert('Google sign-in failed: ' + (e.message || e));
     googleBtn.disabled = false;
     googleBtn.innerHTML = originalLabel;
   }
 }
-
 /* ---------------- Phase 3: per-resource API (revenue, expenses, loans,
    loan payments, tax, settings). /api/state is kept ONLY for the pieces
    that aren't normalized tables yet: categories, monthlyArchive,

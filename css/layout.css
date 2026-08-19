@@ -2,11 +2,27 @@
    HAPPYNET — Main Layout & Grid
    ============================================================================ */
 
+/* Root & Body Wrapper Settings */
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+#root, .app-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Main Content Area (Shifted past the fixed sidebar) */
 .main {
   flex: 1;
   min-width: 0;
+  margin-left: 240px; /* Accounts for fixed sidebar width */
   padding: 24px 34px 90px;
-  max-width: 1440px;
+  max-width: calc(100% - 240px);
+  box-sizing: border-box;
 }
 
 /* Topbar */
@@ -230,6 +246,8 @@
 /* Responsive */
 @media (max-width: 900px) {
   .main {
+    margin-left: 0;
+    max-width: 100%;
     padding: 18px 16px 90px;
   }
   .two-col {
