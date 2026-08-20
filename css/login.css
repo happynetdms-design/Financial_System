@@ -363,6 +363,69 @@ html, body {
   text-decoration: underline;
 }
 
+.login-card .check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--ink-soft, #1D2D44);
+  font-weight: 500;
+  text-transform: none;
+}
+
+.login-card .check-row input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--gold-deep, #B88328);
+}
+
+.login-password-hint {
+  margin: 6px 0 0;
+  color: var(--muted, #717A8C);
+  font-size: 11px;
+}
+
+.login-forgot-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hair, #E2DDD0);
+}
+
+.login-forgot-panel form label {
+  margin-top: 0;
+}
+
+.login-forgot-panel .btn {
+  margin-top: 10px;
+  background: var(--ink-soft, #1D2D44);
+  color: #fff;
+}
+
+.login-status-notice,
+.login-status-error,
+#reset-status {
+  margin-top: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #24533b;
+}
+
+.login-status-notice {
+  color: #24533b;
+  background: #edf7ef;
+  border: 1px solid #c8e6ce;
+}
+
+.login-status-error,
+#reset-status.login-status-error {
+  color: #8a2f2f;
+  background: #fff1f0;
+  border: 1px solid #f1c5c1;
+}
+
 /* Divider */
 .login-divider {
   display: flex;

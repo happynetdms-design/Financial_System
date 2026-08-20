@@ -11,8 +11,15 @@ for (const file of required) {
   if(!text.includes('requireUser')){console.error(`ERROR missing auth guard: ${file}`);errors++;}
 }
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const frontendSources = [
+  fs.readFileSync(path.join(root,'js','app.js'),'utf8'),
+  ...fs.readdirSync(path.join(root,'js','modules'))
+    .filter(file => file.endsWith('.js'))
+    .sort()
+    .map(file => fs.readFileSync(path.join(root,'js','modules',file),'utf8'))
+].join('\n');
 for (const needle of ["id:'system_health'", "viewSystemHealth", "/api/system-health"]) {
-  if(!index.includes(needle)){console.error(`ERROR UI integration missing: ${needle}`);errors++;}
+  if(!index.includes(needle) && !frontendSources.includes(needle)){console.error(`ERROR UI integration missing: ${needle}`);errors++;}
 }
 const phaseNotes=[];
 function walk(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,ent.name);if(ent.isDirectory())walk(p);else if(/^PHASE\d+.*\.(md|txt)$/i.test(ent.name)||/^MERGE_NOTES\.md$/i.test(ent.name))phaseNotes.push(path.relative(root,p));}}

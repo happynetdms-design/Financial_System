@@ -7,7 +7,8 @@ exports.handler = async (event) => {
   try{ body = JSON.parse(event.body || '{}'); }
   catch(e){ return json(400, { error: 'Invalid JSON body.' }); }
 
-  const { email, password } = body;
+  const email = String(body.email || '').trim().toLowerCase();
+  const password = String(body.password || '');
   if(!email || !password) return json(400, { error: 'Email and password are required.' });
 
   try{
