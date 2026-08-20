@@ -67,7 +67,7 @@ async function buildContext(db, branchId, userId){
 
   const keys = Object.keys(months).sort();
   const recent = keys.slice(-3);
-  const prior = keys.slice(-6, -3); // FIXED: Slice syntax error
+  const prior = keys.slice(-6, -3);
 
   const avg = (arr, k) => arr.length ? arr.reduce((s, m) => s + n(months[m]?.[k]), 0) / arr.length : 0;
   const avgRev = avg(recent, 'revenue'), avgExp = avg(recent, 'expenses');
@@ -77,7 +77,6 @@ async function buildContext(db, branchId, userId){
   const burn = Math.max(avgExp - avgRev, 0);
   const cashNet = cashIn - cashOut;
 
-  // FIXED: Precise direction calculation for cash balance
   const cashBalance = (cashR.data || []).reduce((s, r) => {
     const amt = n(r.amount_kes);
     if (r.direction === 'outflow' || r.direction === 'out') return s - amt;
@@ -186,7 +185,6 @@ exports.handler = async event => {
       if(e || !c) return json(404, {error: 'Conversation not found.'});
     }
 
-    // FIXED: Retrieve historical messages BEFORE inserting current prompt to ensure proper turn alternation
     let history = [];
     if (body.history?.length) {
       history = cleanHistory(body.history);
@@ -199,12 +197,10 @@ exports.handler = async event => {
       history = (dbMessages || []).reverse();
     }
 
-    // Sanitize sequence to guarantee history ends on assistant turn (if not empty)
     if (history.length > 0 && history[history.length - 1].role === 'user') {
       history.pop();
     }
 
-    // Save prompt to database
     await db.from('ai_messages').insert({
       conversation_id: conversationId,
       role: 'user',
@@ -216,21 +212,34 @@ exports.handler = async event => {
     if(!process.env.ANTHROPIC_API_KEY){ 
       result = fallbackAnswer(context, question); 
     } else {
-      const prompt = `LIVE HFMS CONTEXT:\n${JSON.stringify(context)}\n\nUSER REQUEST:\n${question}\n\nRemember: use only the supplied context for financial facts.`;
-      
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
           'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
+          'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'prompt-caching-2024-07-31'
         },
         body: JSON.stringify({
           model: MODEL,
           max_tokens: 2600,
           temperature: 0.1,
-          system: SYSTEM,
-          messages: [...history, { role: 'user', content: prompt }]
+          system: [
+            {
+              type: 'text',
+              text: SYSTEM,
+              cache_control: { type: 'ephemeral' }
+            },
+            {
+              type: 'text',
+              text: `LIVE HFMS CONTEXT:\n${JSON.stringify(context)}`,
+              cache_control: { type: 'ephemeral' }
+            }
+          ],
+          messages: [
+            ...history,
+            { role: 'user', content: `USER REQUEST:\n${question}\n\nRemember: use only the supplied context for financial facts.` }
+          ]
         })
       });
 
