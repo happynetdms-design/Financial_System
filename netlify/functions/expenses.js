@@ -25,36 +25,78 @@ async function resolveCategoryId(admin, branchId, categoryName){
 }
 
 exports.handler = async (event) => {
-  const admin = adminClient();
   const method = event.httpMethod;
 
-  let body = {};
-  if(method !== 'GET'){
-    try{ body = JSON.parse(event.body || '{}'); }
-    catch(e){ return json(400, { error: 'Invalid JSON body.' }); }
+  // 1. Handle CORS Preflight Requests Immediately
+  if (method === 'OPTIONS') {
+    return json(200, { ok: true });
   }
+
+  // 2. Environment Variables Verification Check
+  if (!process.env.SUPABASE_URL || (!process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_ANON_KEY)) {
+    return json(500, {
+      status: 'not configured',
+      error: 'Missing required Supabase environment variables on server.'
+    });
+  }
+
+  // 3. System Health Probe / Ping Diagnostic
+  const isHealthCheck = event.queryStringParameters && event.queryStringParameters.health === 'true';
+  if (isHealthCheck) {
+    return json(200, {
+      status: 'configured',
+      module: 'expenses.js',
+      reachable: true
+    });
+  }
+
+  // Initialize Supabase Admin Client
+  let admin;
+  try {
+    admin = adminClient();
+  } catch (err) {
+    return json(500, { status: 'not configured', error: err.message });
+  }
+
+  // Parse HTTP Body
+  let body = {};
+  if (method !== 'GET') {
+    try { 
+      body = JSON.parse(event.body || '{}'); 
+    } catch (e) { 
+      return json(400, { error: 'Invalid JSON body.' }); 
+    }
+  }
+
+  // Extract Branch ID
   const branchId = method === 'GET'
     ? (event.queryStringParameters || {}).branch_id
     : body.branch_id;
 
-  const ctx = await requireBranchAccess(event, requireUser, admin, branchId, { write: method !== 'GET' });
-  if(ctx.error) return json(ctx.status, { error: ctx.error });
+  // Allow System Auditor to Bypass RBAC if explicitly probing module health
+  if (!branchId && event.queryStringParameters && event.queryStringParameters.probe === '1') {
+    return json(200, { status: 'configured', module: 'expenses.js' });
+  }
 
-  try{
-    if(method === 'GET'){
+  // Enforce Access Control (RBAC)
+  const ctx = await requireBranchAccess(event, requireUser, admin, branchId, { write: method !== 'GET' });
+  if (ctx.error) return json(ctx.status, { error: ctx.error });
+
+  try {
+    if (method === 'GET') {
       const { from, to, status } = event.queryStringParameters || {};
       let q = admin.from('expenses')
         .select('*, financial_accounts(name), categories(name)')
         .eq('branch_id', branchId).eq('is_deleted', false);
-      if(from) q = q.gte('expense_date', from);
-      if(to) q = q.lte('expense_date', to);
-      if(status) q = q.eq('status', status);
+      if (from) q = q.gte('expense_date', from);
+      if (to) q = q.lte('expense_date', to);
+      if (status) q = q.eq('status', status);
       const { data, error } = await q.order('expense_date', { ascending: false });
-      if(error) return json(500, { error: error.message });
+      if (error) return json(500, { error: error.message });
       return json(200, { expenses: data });
     }
 
-    if(method === 'POST'){
+    if (method === 'POST') {
       // Supports a single expense or a bulk import (e.g. Tende export rows).
       // Each row is inserted individually so one duplicate txn_ref doesn't
       // sink an entire batch — duplicates are reported back, not silently
@@ -63,8 +105,8 @@ exports.handler = async (event) => {
       const inserted = [];
       const skipped = [];
 
-      for(const r of rows){
-        if(!r.expense_date || r.amount_kes === undefined || r.amount_kes === null){
+      for (const r of rows) {
+        if (!r.expense_date || r.amount_kes === undefined || r.amount_kes === null) {
           skipped.push({ row: r, reason: 'Missing expense_date or amount_kes.' });
           continue;
         }
@@ -88,9 +130,9 @@ exports.handler = async (event) => {
           created_by: ctx.user.id
         };
         const { data, error } = await admin.from('expenses').insert(payload).select().maybeSingle();
-        if(error){
+        if (error) {
           // 23505 = unique_violation — our duplicate-txn_ref guard tripped.
-          if(error.code === '23505'){
+          if (error.code === '23505') {
             skipped.push({ row: r, reason: `Duplicate txn_ref "${r.txn_ref}" already exists on this branch.` });
             continue;
           }
@@ -101,8 +143,8 @@ exports.handler = async (event) => {
       return json(201, { inserted, skipped });
     }
 
-    if(method === 'PATCH'){
-      if(!body.id) return json(400, { error: 'id is required.' });
+    if (method === 'PATCH') {
+      if (!body.id) return json(400, { error: 'id is required.' });
 
       // Approving/rejecting a pending expense is a separation-of-duties
       // action — restricted to Branch Manager or Head Office, same as the
@@ -111,11 +153,11 @@ exports.handler = async (event) => {
       // would otherwise let an Accountant approve their own submission via
       // a direct API call.
       const isApprovalAction = body.status === 'posted' || body.status === 'rejected';
-      if(isApprovalAction){
+      if (isApprovalAction) {
         const APPROVER_ROLES = ['owner', 'finance_manager', 'branch_manager'];
-        if(!ctx.access.isHeadOffice && !APPROVER_ROLES.includes(ctx.role)){
+        if (!ctx.access.isHeadOffice && !APPROVER_ROLES.includes(ctx.role)) {
           const { data: current } = await admin.from('expenses').select('status').eq('id', body.id).eq('branch_id', branchId).maybeSingle();
-          if(current && current.status === 'pending_approval'){
+          if (current && current.status === 'pending_approval') {
             return json(403, { error: 'Only a Branch Manager or Head Office can approve or reject an expense.' });
           }
         }
@@ -124,13 +166,13 @@ exports.handler = async (event) => {
       const updatable = ['expense_date', 'account_id', 'category_id', 'supplier_id',
         'description', 'paid_to', 'amount_kes', 'charges_kes', 'owner_funded', 'status'];
       const patch = {};
-      for(const k of updatable) if(body[k] !== undefined) patch[k] = body[k];
-      if(body.account_name !== undefined) patch.account_id = await resolveAccountId(admin, branchId, body.account_name);
-      if(body.category_name !== undefined) patch.category_id = await resolveCategoryId(admin, branchId, body.category_name);
+      for (const k of updatable) if (body[k] !== undefined) patch[k] = body[k];
+      if (body.account_name !== undefined) patch.account_id = await resolveAccountId(admin, branchId, body.account_name);
+      if (body.category_name !== undefined) patch.category_id = await resolveCategoryId(admin, branchId, body.category_name);
 
       // Approving is an explicit action, not just a status flip, so we can
       // always answer "who approved this and when" later.
-      if(body.status === 'posted' && body.approve === true){
+      if (body.status === 'posted' && body.approve === true) {
         patch.approved_by = ctx.user.id;
         patch.approved_at = new Date().toISOString();
       }
@@ -140,25 +182,25 @@ exports.handler = async (event) => {
         .from('expenses').update(patch)
         .eq('id', body.id).eq('branch_id', branchId)
         .select().maybeSingle();
-      if(error) return json(500, { error: error.message });
-      if(!data) return json(404, { error: 'Expense not found on this branch.' });
+      if (error) return json(500, { error: error.message });
+      if (!data) return json(404, { error: 'Expense not found on this branch.' });
       return json(200, { expense: data });
     }
 
-    if(method === 'DELETE'){
-      if(!body.id) return json(400, { error: 'id is required.' });
+    if (method === 'DELETE') {
+      if (!body.id) return json(400, { error: 'id is required.' });
       const { data, error } = await admin
         .from('expenses')
         .update({ is_deleted: true, updated_at: new Date().toISOString() })
         .eq('id', body.id).eq('branch_id', branchId)
         .select().maybeSingle();
-      if(error) return json(500, { error: error.message });
-      if(!data) return json(404, { error: 'Expense not found on this branch.' });
+      if (error) return json(500, { error: error.message });
+      if (!data) return json(404, { error: 'Expense not found on this branch.' });
       return json(200, { ok: true });
     }
 
     return json(405, { error: 'Method not allowed.' });
-  }catch(e){
+  } catch (e) {
     console.error('expenses error', e);
     return json(500, { error: 'Unexpected error handling expenses.' });
   }
