@@ -16,10 +16,11 @@ async function getAccess(admin, userId){
   let data = null;
   let error = null;
 
-  // Attempt query on user_branch_access first, fallback to user_branches if missing
+  // Keep the grant query independent from PostgREST relationship metadata.
+  // Older deployments may have the same tables without a discoverable FK.
   const res = await admin
     .from('user_branch_access')
-    .select('branch_id, role, branches(name, code)')
+    .select('branch_id, role')
     .eq('user_id', userId);
 
   data = res.data;
@@ -35,9 +36,18 @@ async function getAccess(admin, userId){
     data = fallbackRes.data;
   }
 
-  const grants = data && data.length > 0 
+  const grants = data && data.length > 0
     ? data 
     : [{ branch_id: 'main', role: 'viewer' }]; // PERMANENT FALLBACK SAFEGUARD
+
+  const branchIds = [...new Set(grants.map(grant => grant.branch_id).filter(Boolean))];
+  if(branchIds.length){
+    const branches = await admin.from('branches').select('id, name, code').in('id', branchIds);
+    if(!branches.error){
+      const byId = new Map((branches.data || []).map(branch => [branch.id, branch]));
+      grants.forEach(grant => { grant.branches = byId.get(grant.branch_id) || null; });
+    }
+  }
 
   const isHeadOffice = grants.some(g => ['owner', 'finance_manager', 'super_admin'].includes(g.role));
   const isSuperAdmin = grants.some(g => g.role === 'super_admin');

@@ -10,11 +10,13 @@ exports.handler = async (event) => {
   try{
     const access = await getAccess(admin, user.id);
 
-    const { data: profile } = await admin
+    const { data: profile, error: profileError } = await admin
       .from('user_profiles')
       .select('full_name')
       .eq('user_id', user.id)
       .maybeSingle();
+
+    if(profileError && profileError.code !== 'PGRST205') console.warn('profile lookup unavailable:', profileError.message);
 
     return json(200, {
       user: { id: user.id, email: user.email, full_name: profile ? profile.full_name : null },
@@ -28,6 +30,6 @@ exports.handler = async (event) => {
     });
   }catch(e){
     console.error('me error', e);
-    return json(500, { error: 'Unexpected error loading your access.' });
+    return json(500, { error: e.message || 'Unexpected error loading your access.' });
   }
 };

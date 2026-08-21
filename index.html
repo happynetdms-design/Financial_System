@@ -31,7 +31,9 @@
     <div class="loading-screen">Loading Happynet…</div>
   </div>
 
-  <!-- Application Scripts -->
-  <script src="/js/app.js"></script>
+  <!-- Application Scripts (Module load order is critical) -->
+  <script type="module" src="/js/modules/02-api-auth.js"></script>
+  <script type="module" src="/js/modules/03-resource-api-exports.js"></script>
+  <script type="module" src="/js/app.js"></script>
 </body>
 </html>

@@ -498,7 +498,7 @@ async function startApp(){
   try{
     await loadState();
   }catch(e){
-    if(getSession()) renderLogin('Could not load your account. Please try again.');
+    if(getSession()) renderLogin(e.message || 'Could not load your account. Please try again.');
     return;
   }
   render();
