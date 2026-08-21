@@ -16,7 +16,7 @@ function wireTab(){
     }
     const dupe = state.dailyRevenue.find(r=>r.date===date && r.id!==editingRevenueId);
     if(dupe){
-      errEl.innerHTML = `<div class="err-msg">A revenue entry already exists for ${date}. Edit or delete it first â€” duplicates aren't allowed.</div>`; return;
+      errEl.innerHTML = `<div class="err-msg">A revenue entry already exists for ${date}. Edit or delete it first ” duplicates aren't allowed.</div>`; return;
     }
     if(editingRevenueId){
       const rec = state.dailyRevenue.find(r=>r.id===editingRevenueId);
@@ -51,7 +51,7 @@ function wireTab(){
     if(!txn_ref){ errEl.innerHTML = `<div class="err-msg">Txn Ref is required.</div>`; return; }
     const dupe = state.expenses.find(x=>x.txn_ref.toLowerCase()===txn_ref.toLowerCase() && x.id!==editingExpenseId);
     if(dupe){
-      errEl.innerHTML = `<div class="err-msg">Txn Ref "${txn_ref}" already exists â€” duplicate rejected.</div>`; return;
+      errEl.innerHTML = `<div class="err-msg">Txn Ref "${txn_ref}" already exists ” duplicate rejected.</div>`; return;
     }
     const needsApprovalEl = fe.querySelector('[name=needs_approval]');
     const payload = {
@@ -193,7 +193,7 @@ function wireTab(){
   let reconWorkbenchData = null;
   async function reconAccountsLoad(){
     const sel=document.getElementById('recon-account'); if(!sel) return;
-    try{ const r=await apiList('/api/financial-accounts',state.branchId); sel.innerHTML='<option value="">Select accountâ€¦</option>'+(r.accounts||[]).map(a=>`<option value="${a.id}">${a.name} Â· ${a.kind}</option>`).join(''); }
+    try{ const r=await apiList('/api/financial-accounts',state.branchId); sel.innerHTML='<option value="">Select account¦</option>'+(r.accounts||[]).map(a=>`<option value="${a.id}">${a.name} Â· ${a.kind}</option>`).join(''); }
     catch(e){ sel.innerHTML='<option value="">Unable to load accounts</option>'; }
   }
   function parseCsvStatement(text){
@@ -226,7 +226,7 @@ function wireTab(){
     const s=r.summary||{}; const el=document.getElementById('recon-summary');
     if(el) el.innerHTML=`<div class="grid-3"><div class="stat"><div class="stat-label">Statement rows</div><div class="stat-value">${s.statementRows||0}</div></div><div class="stat"><div class="stat-label">Matched</div><div class="stat-value">${s.matched||0}</div></div><div class="stat"><div class="stat-label">Unmatched</div><div class="stat-value">${s.unmatched||0}</div></div></div><div class="hint" style="margin-top:8px">Status: <b>${r.reconciliation.status}</b> Â· Difference: <b>KES ${Number(r.reconciliation.difference||0).toLocaleString(undefined,{minimumFractionDigits:2})}</b> Â· Open exceptions: <b>${s.openExceptions||0}</b></div>`;
     const rowsEl=document.getElementById('recon-rows');
-    if(rowsEl) rowsEl.innerHTML=`<table class="data-table"><thead><tr><th>Row</th><th>Date</th><th>Reference</th><th>Description</th><th>Amount</th><th>Dir</th><th>Status</th><th>Score</th><th>Action</th></tr></thead><tbody>${(r.rows||[]).map(row=>{const cand=(row.candidate_transaction_id||'');return `<tr><td>${row.source_row_number||''}</td><td>${row.external_date||''}</td><td>${row.external_reference||''}</td><td>${row.external_description||''}</td><td>KES ${Number(row.external_amount||0).toLocaleString()}</td><td>${row.external_direction}</td><td><b>${row.match_status}</b>${row.excluded_reason?`<div class="hint">${row.excluded_reason}</div>`:''}</td><td>${row.match_score?Math.round(Number(row.match_score)*100)+'%':'â€”'}</td><td>${row.match_status==='unmatched'&&cand?`<button class="btn ghost" data-recon-accept="${row.id}" data-recon-tx="${cand}">Accept</button>`:''}${['matched','manual'].includes(row.match_status)?`<button class="btn ghost" data-recon-unmatch="${row.id}">Unmatch</button>`:`<button class="btn ghost" data-recon-exclude="${row.id}">Exclude</button>`}</td></tr>`;}).join('')}</tbody></table>`;
+    if(rowsEl) rowsEl.innerHTML=`<table class="data-table"><thead><tr><th>Row</th><th>Date</th><th>Reference</th><th>Description</th><th>Amount</th><th>Dir</th><th>Status</th><th>Score</th><th>Action</th></tr></thead><tbody>${(r.rows||[]).map(row=>{const cand=(row.candidate_transaction_id||'');return `<tr><td>${row.source_row_number||''}</td><td>${row.external_date||''}</td><td>${row.external_reference||''}</td><td>${row.external_description||''}</td><td>KES ${Number(row.external_amount||0).toLocaleString()}</td><td>${row.external_direction}</td><td><b>${row.match_status}</b>${row.excluded_reason?`<div class="hint">${row.excluded_reason}</div>`:''}</td><td>${row.match_score?Math.round(Number(row.match_score)*100)+'%':'”'}</td><td>${row.match_status==='unmatched'&&cand?`<button class="btn ghost" data-recon-accept="${row.id}" data-recon-tx="${cand}">Accept</button>`:''}${['matched','manual'].includes(row.match_status)?`<button class="btn ghost" data-recon-unmatch="${row.id}">Unmatch</button>`:`<button class="btn ghost" data-recon-exclude="${row.id}">Exclude</button>`}</td></tr>`;}).join('')}</tbody></table>`;
     const exEl=document.getElementById('recon-exceptions'); if(exEl) exEl.innerHTML=`<h4>Exceptions</h4>${(r.exceptions||[]).map(x=>`<div class="form-card" style="padding:10px;margin:6px 0"><b>${x.severity.toUpperCase()}</b> Â· ${x.description}<span style="float:right">${x.status==='open'?`<button class="btn ghost" data-recon-resolve="${x.id}">Resolve</button>`:'Resolved'}</span></div>`).join('')||'<div class="hint">No exceptions.</div>'}`;
     const audEl=document.getElementById('recon-audit'); if(audEl) audEl.innerHTML=`<details><summary>Reconciliation audit trail</summary>${(r.audit||[]).map(a=>`<div class="hint" style="padding:5px 0;border-bottom:1px solid #eee"><b>${a.event_type}</b> Â· ${new Date(a.created_at).toLocaleString()}</div>`).join('')}</details>`;
     document.querySelectorAll('[data-recon-accept]').forEach(b=>b.onclick=async()=>{try{await apiCreate('/api/reconciliation-center',{branch_id:state.branchId,reconciliation_id:reconWorkbenchId,action:'match',external_row_id:b.dataset.reconAccept,financial_transaction_id:b.dataset.reconTx});await reconLoad(reconWorkbenchId);}catch(e){alert(e.message);}});
@@ -240,7 +240,7 @@ function wireTab(){
     const account=document.getElementById('recon-account').value;if(!account)throw new Error('Select an account.');
     const file=document.getElementById('recon-file').files[0]; let rows=[]; if(file){rows=parseCsvStatement(await file.text());if(!rows.length)throw new Error('No valid statement rows were detected.');}
     const body={branch_id:state.branchId,account_id:account,period_start:document.getElementById('recon-period-start').value,period_end:document.getElementById('recon-period-end').value,opening_statement_balance:Number(document.getElementById('recon-opening').value||0),statement_balance:Number(document.getElementById('recon-closing').value||0),closing_statement_balance:Number(document.getElementById('recon-closing').value||0),tolerance_kes:Number(document.getElementById('recon-tolerance').value||.01),statement_source:document.getElementById('recon-source').value,statement_file_name:file?file.name:null,action:'create'};
-    const created=await apiCreate('/api/reconciliation-center',body);reconWorkbenchId=created.reconciliation.id;if(rows.length)await apiCreate('/api/reconciliation-center',{branch_id:state.branchId,reconciliation_id:reconWorkbenchId,action:'import_rows',rows});document.getElementById('recon-workbench-status').textContent='Reconciliation opened. Generating match suggestionsâ€¦';await apiCreate('/api/reconciliation-center',{branch_id:state.branchId,reconciliation_id:reconWorkbenchId,action:'suggest_matches'});await reconLoad(reconWorkbenchId);document.getElementById('recon-workbench-status').textContent='Reconciliation ready for review.';
+    const created=await apiCreate('/api/reconciliation-center',body);reconWorkbenchId=created.reconciliation.id;if(rows.length)await apiCreate('/api/reconciliation-center',{branch_id:state.branchId,reconciliation_id:reconWorkbenchId,action:'import_rows',rows});document.getElementById('recon-workbench-status').textContent='Reconciliation opened. Generating match suggestions¦';await apiCreate('/api/reconciliation-center',{branch_id:state.branchId,reconciliation_id:reconWorkbenchId,action:'suggest_matches'});await reconLoad(reconWorkbenchId);document.getElementById('recon-workbench-status').textContent='Reconciliation ready for review.';
   }catch(e){document.getElementById('recon-workbench-status').textContent='Error: '+e.message;}};
   const reconRefresh=document.getElementById('btn-recon-refresh');if(reconRefresh)reconRefresh.onclick=()=>reconLoad(reconWorkbenchId);
   const reconSuggest=document.getElementById('btn-recon-suggest');if(reconSuggest)reconSuggest.onclick=async()=>{try{await apiCreate('/api/reconciliation-center',{branch_id:state.branchId,reconciliation_id:reconWorkbenchId,action:'suggest_matches'});await reconLoad(reconWorkbenchId);}catch(e){alert(e.message);}};
@@ -263,12 +263,12 @@ function wireTab(){
       const vals={name:p.taxpayer_name||'',pin:p.kra_pin||'',yearend:p.accounting_year_end_month||12,tcc:p.tcc_status||'unknown',expiry:p.tcc_expiry_date||'',etims:p.etims_compliant===true?'true':p.etims_compliant===false?'':'',vat:p.vat_registered===true?'true':p.vat_registered===false?'':'',agent:p.tax_agent_name||'',agentContact:p.tax_agent_contact||''};
       [['taxp-name',vals.name],['taxp-pin',vals.pin],['taxp-yearend',vals.yearend],['taxp-tcc',vals.tcc],['taxp-tcc-expiry',vals.expiry],['taxp-etims',vals.etims],['taxp-vat',vals.vat],['taxp-agent',vals.agent],['taxp-agent-contact',vals.agentContact]].forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.value=v;});
       const obs=r.obligations||[]; const periods=r.periods||[];
-      const optObs=document.getElementById('tax-period-obligation'); if(optObs)optObs.innerHTML='<option value="">Select obligationâ€¦</option>'+obs.filter(o=>o.applicable).map(o=>`<option value="${o.id}">${o.tax_type} Â· ${o.filing_authority||'Authority'}</option>`).join('');
-      const optPeriods=document.getElementById('tax-action-period'); if(optPeriods)optPeriods.innerHTML='<option value="">Select tax periodâ€¦</option>'+periods.map(x=>`<option value="${x.id}">${x.tax_obligations?.tax_type||'Tax'} Â· ${x.period_start} â†’ ${x.period_end} Â· ${x.compliance?.label||''}</option>`).join('');
+      const optObs=document.getElementById('tax-period-obligation'); if(optObs)optObs.innerHTML='<option value="">Select obligation¦</option>'+obs.filter(o=>o.applicable).map(o=>`<option value="${o.id}">${o.tax_type} Â· ${o.filing_authority||'Authority'}</option>`).join('');
+      const optPeriods=document.getElementById('tax-action-period'); if(optPeriods)optPeriods.innerHTML='<option value="">Select tax period¦</option>'+periods.map(x=>`<option value="${x.id}">${x.tax_obligations?.tax_type||'Tax'} Â· ${x.period_start} â†’ ${x.period_end} Â· ${x.compliance?.label||''}</option>`).join('');
       const table=document.getElementById('tax-intelligence-table');
-      if(table)table.innerHTML=`<table class="data-table"><thead><tr><th>Tax</th><th>Period</th><th>Filing Due</th><th>Payment Due</th><th>Due</th><th>Paid</th><th>Balance</th><th>Filing</th><th>Status</th></tr></thead><tbody>${periods.map(x=>{const bal=Math.max(0,Number(x.amount_due_kes||0)-Number(x.amount_paid_kes||0));const c=x.compliance||{};return `<tr><td>${x.tax_obligations?.tax_type||'â€”'}</td><td>${x.period_start} â†’ ${x.period_end}</td><td>${x.filing_due_date||'â€”'}</td><td>${x.payment_due_date||'â€”'}</td><td>${KES(x.amount_due_kes)}</td><td>${KES(x.amount_paid_kes)}</td><td>${KES(bal)}</td><td>${x.filing_status}</td><td><span class="tag ${c.severity==='critical'?'alert':c.severity==='warning'?'warn':c.severity==='good'?'good':''}">${c.label||'â€”'}</span>${c.days!==null&&c.days!==undefined?`<div class="hint">${c.days<0?Math.abs(c.days)+' days late':c.days+' days'}</div>`:''}</td></tr>`}).join('')||'<tr><td colspan="9" class="hint">No tax periods have been created yet.</td></tr>'}</tbody></table>`;
+      if(table)table.innerHTML=`<table class="data-table"><thead><tr><th>Tax</th><th>Period</th><th>Filing Due</th><th>Payment Due</th><th>Due</th><th>Paid</th><th>Balance</th><th>Filing</th><th>Status</th></tr></thead><tbody>${periods.map(x=>{const bal=Math.max(0,Number(x.amount_due_kes||0)-Number(x.amount_paid_kes||0));const c=x.compliance||{};return `<tr><td>${x.tax_obligations?.tax_type||'”'}</td><td>${x.period_start} â†’ ${x.period_end}</td><td>${x.filing_due_date||'”'}</td><td>${x.payment_due_date||'”'}</td><td>${KES(x.amount_due_kes)}</td><td>${KES(x.amount_paid_kes)}</td><td>${KES(bal)}</td><td>${x.filing_status}</td><td><span class="tag ${c.severity==='critical'?'alert':c.severity==='warning'?'warn':c.severity==='good'?'good':''}">${c.label||'”'}</span>${c.days!==null&&c.days!==undefined?`<div class="hint">${c.days<0?Math.abs(c.days)+' days late':c.days+' days'}</div>`:''}</td></tr>`}).join('')||'<tr><td colspan="9" class="hint">No tax periods have been created yet.</td></tr>'}</tbody></table>`;
       const rules=document.getElementById('tax-rules-table');
-      if(rules)rules.innerHTML=`<table class="data-table"><thead><tr><th>Tax</th><th>Frequency</th><th>Deadline</th><th>Filing</th><th>Authority</th><th>Verified</th></tr></thead><tbody>${(r.rules||[]).map(x=>`<tr><td>${x.tax_type}</td><td>${x.frequency}</td><td>${x.due_rule}</td><td>${x.filing_due_rule||'â€”'}</td><td>${x.authority}</td><td>${x.verified_at?new Date(x.verified_at).toLocaleDateString():'â€”'}</td></tr>`).join('')}</tbody></table>`;
+      if(rules)rules.innerHTML=`<table class="data-table"><thead><tr><th>Tax</th><th>Frequency</th><th>Deadline</th><th>Filing</th><th>Authority</th><th>Verified</th></tr></thead><tbody>${(r.rules||[]).map(x=>`<tr><td>${x.tax_type}</td><td>${x.frequency}</td><td>${x.due_rule}</td><td>${x.filing_due_rule||'”'}</td><td>${x.authority}</td><td>${x.verified_at?new Date(x.verified_at).toLocaleDateString():'”'}</td></tr>`).join('')}</tbody></table>`;
       const reserve=Number(dashboardData().alloc?.tax||0), due30=Number(sum.due30Kes||0), out=Number(sum.outstandingKes||0);
       const ratio=out>0?reserve/out*100:100;
       const ra=document.getElementById('tax-reserve-analysis');
@@ -338,7 +338,7 @@ function wireTab(){
   document.querySelectorAll('[data-del-category]').forEach(b=>b.addEventListener('click',()=>{
     const name = b.dataset.delCategory;
     if(state.expenses.some(e=>e.category===name)){
-      alert(`Can't remove "${name}" â€” it's used by existing expenses. Recategorize those first.`);
+      alert(`Can't remove "${name}" ” it's used by existing expenses. Recategorize those first.`);
       return;
     }
     state.categories = CATS().filter(c=>c!==name);
@@ -494,11 +494,11 @@ async function startApp(){
   const s = getSession();
   if(!s){ renderLogin(); return; }
   currentUserEmail = s.user ? s.user.email : '';
-  root().innerHTML = `<div class="loading-screen">Loading Happynetâ€¦</div>`;
+  root().innerHTML = `<div class="loading-screen">Loading Happynet¦</div>`;
   try{
     await loadState();
   }catch(e){
-    renderLogin(e.message || 'Your session expired â€” please sign in again.');
+    renderLogin(e.message || 'Your session expired ” please sign in again.');
     return;
   }
   render();

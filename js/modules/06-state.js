@@ -6,7 +6,7 @@ const monthKey = d => d.slice(0,7); // YYYY-MM from YYYY-MM-DD
 const monthLabel = ym => { const [y,m]=ym.split('-').map(Number); return new Date(y,m-1,1).toLocaleString('en-US',{month:'long',year:'numeric'}); };
 const daysInMonth = ym => { const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); };
 // Real UUIDs now (previously a short random string) so a record's id never
-// changes between being created locally and being persisted â€” the backend
+// changes between being created locally and being persisted ” the backend
 // tables use uuid primary keys and accept a client-supplied one on create.
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() :
   'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -270,7 +270,7 @@ function defaultState(){
       {id:uid(), date:"2026-07-27", txn_ref:"UGRTC6UAQK", account_used:"Bank Account", category:"Other", description:"Imported from Tende Expense Log", paid_to:"", amount_kes:450.0, charges_kes:13.0, owner_funded:false}
     ],
     loans: [
-      {id:johnLoanId, debt_name:"John â€” Related Party Loan (Splicer & Inventory)", lender:"John (Director)", original_principal_kes:77600, annual_interest_rate_pct:0, start_date:"2026-07-13", min_monthly_payment_kes:0, current_balance_kes:51540, status:"ACTIVE"},
+      {id:johnLoanId, debt_name:"John ” Related Party Loan (Splicer & Inventory)", lender:"John (Director)", original_principal_kes:77600, annual_interest_rate_pct:0, start_date:"2026-07-13", min_monthly_payment_kes:0, current_balance_kes:51540, status:"ACTIVE"},
       {id:saccoLoanId, debt_name:"sacco loan", lender:"sacco", original_principal_kes:3000000, annual_interest_rate_pct:5, start_date:"2026-07-23", min_monthly_payment_kes:0, current_balance_kes:2977500, status:"ACTIVE"}
     ],
     loanPayments: [
@@ -305,7 +305,7 @@ let saveStatus = 'idle'; // idle | saving | saved | error
 // Which local array maps to which endpoint, and how a local record turns
 // into the shape that endpoint expects. Client-generated uuid() ids are
 // sent as-is on create, so a record's id is stable from the moment it's
-// added in the UI â€” no server round trip needed before it can be
+// added in the UI ” no server round trip needed before it can be
 // edited/deleted again.
 const CORE_ENTITY_CONFIG = {
   dailyRevenue: {
@@ -328,7 +328,7 @@ const CORE_ENTITY_CONFIG = {
       min_monthly_payment_kes:Number(l.min_monthly_payment_kes)||0, status:l.status||'ACTIVE' })
   },
   // Balance math (loan.current_balance_kes) is computed client-side, same
-  // as this app already did â€” syncing the 'loans' array separately carries
+  // as this app already did ” syncing the 'loans' array separately carries
   // that updated balance server-side, so this endpoint doesn't touch it.
   loanPayments: {
     path: '/api/loan-payments',
@@ -391,7 +391,7 @@ let availableBranches = [];
 async function loadState(preferredBranchId){
   const me = await apiGetMe();
   if(!me.branches || me.branches.length === 0){
-    throw new Error('Your account has no branch access yet â€” ask an admin to grant you access.');
+    throw new Error('Your account has no branch access yet ” ask an admin to grant you access.');
   }
   availableBranches = me.branches;
   const lastUsed = localStorage.getItem('happynet_last_branch');
@@ -461,18 +461,18 @@ async function loadState(preferredBranchId){
 
 async function switchBranch(branchId){
   if(branchId === state.branchId) return;
-  root().innerHTML = `<div class="loading-screen">Switching branchâ€¦</div>`;
+  root().innerHTML = `<div class="loading-screen">Switching branch¦</div>`;
   try{
     await loadState(branchId);
     activeTab = 'dashboard';
     render();
   }catch(e){
-    renderLogin(e.message || 'Could not switch branches â€” please sign in again.');
+    renderLogin(e.message || 'Could not switch branches ” please sign in again.');
   }
 }
 
 // Role gates, used throughout the UI to hide/disable actions someone's role
-// can't perform â€” the API enforces this regardless, but showing a button
+// can't perform ” the API enforces this regardless, but showing a button
 // that will just 403 is a bad experience, not real security.
 function canWrite(){ return state.isHeadOffice || ['branch_manager','accountant'].includes(state.role); }
 function canManageSettings(){ return state.isHeadOffice || state.role === 'branch_manager'; }
@@ -493,17 +493,17 @@ function queueSave(){
         syncEntityArray('loanPayments'),
         syncEntityArray('taxObligations'),
         syncSettings(),
-        // Real per-branch home for these three â€” this is what the UI
+        // Real per-branch home for these three ” this is what the UI
         // actually reads back on next load (see apiGetBranchMisc above).
         apiSaveBranchMisc(state.branchId, {
           categories: state.categories, monthlyArchive: state.monthlyArchive, closedMonths: state.closedMonths
         }),
         // /api/state's POST fully REPLACES the stored blob rather than
-        // merging â€” so this keeps writing the complete state (not just
+        // merging ” so this keeps writing the complete state (not just
         // categories/archive/closedMonths) to preserve app_state as a
         // whole-app mirror/rollback point. NOTE: app_state is a single
         // global row, not branch-scoped, so across multiple branches this
-        // mirror only ever reflects whichever branch saved most recently â€”
+        // mirror only ever reflects whichever branch saved most recently ”
         // it's a rollback safety net, not a per-branch source of truth.
         apiSaveState({
           dailyRevenue: state.dailyRevenue, expenses: state.expenses, loans: state.loans,
@@ -525,7 +525,7 @@ function queueSave(){
 function renderSaveBadge(){
   const el = document.getElementById('save-badge');
   if(!el) return;
-  const map = { idle:'', saving:'Savingâ€¦', saved:'Saved', error:'Save failed â€” check connection' };
+  const map = { idle:'', saving:'Saving¦', saved:'Saved', error:'Save failed ” check connection' };
   el.textContent = map[saveStatus] || '';
   el.className = 'save-badge ' + saveStatus;
 }

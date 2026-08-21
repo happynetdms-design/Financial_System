@@ -9,6 +9,7 @@ function getSession(){
   }
   catch(e){ return null; }
 }
+
 function setSession(s, remember=true){
   localStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(SESSION_KEY);
@@ -68,7 +69,7 @@ async function apiLogout(){
     await fetch('/api/logout', {
       method:'POST', headers:{'Authorization':'Bearer '+(s ? s.access_token : '')}
     });
-  }catch(e){ /* ignore â€” clear local session regardless */ }
+  }catch(e){ /* ignore - clear local session regardless */ }
   setSession(null);
 }
 
@@ -101,7 +102,7 @@ async function apiSaveState(data){
   return true;
 }
 
-// Per-branch home for categories/monthlyArchive/closedMonths â€” see
+// Per-branch home for categories/monthlyArchive/closedMonths — see
 // supabase/branch_misc_state.sql for why this exists separately from
 // apiGetState()/apiSaveState() above, which still hit the old single-row
 // /api/state purely as a whole-app mirror/rollback point.
@@ -111,9 +112,10 @@ async function apiGetBranchMisc(branchId){
   const body = await res.json();
   return body.data || {};
 }
+
 async function apiSaveBranchMisc(branchId, data){
   const res = await apiFetch('/api/branch-state', {
-    method:'POST', headers: JSONH,
+    method:'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ branch_id: branchId, data })
   });
   if(!res.ok) throw new Error('Could not save branch data.');
@@ -190,7 +192,7 @@ async function signInWithGoogle() {
 
   const originalLabel = googleBtn.innerHTML;
   googleBtn.disabled = true;
-  googleBtn.innerHTML = 'Redirectingâ€¦';
+  googleBtn.innerHTML = 'Redirecting...';
 
   try {
     const supabase = await loadSupabaseClient();

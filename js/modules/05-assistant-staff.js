@@ -1,7 +1,7 @@
 /* Extracted from app.js; load order is intentional. */
 /* ---------------- AI Assistant (Phase 6) ---------------- */
 // Every answer is generated server-side from a fresh pull of this branch's
-// actual data (see netlify/functions/ai-assistant.js) â€” nothing here sends
+// actual data (see netlify/functions/ai-assistant.js) ” nothing here sends
 // raw financial records to the model from the browser, only the question
 // and a short rolling history for follow-up context.
 let assistantMessages = []; // {role:'user'|'assistant', content, classification, citations}
@@ -19,7 +19,7 @@ function viewAssistant(){
     ['John Loan','Give me a complete owner-loan position and explain the movement.']
   ];
   return `
-    <div class="topbar"><div><h1>HFMS CFO</h1><div class="sub">Interactive finance manager for Happynet â€” analyzes, communicates, advises, prepares reports and proposes controlled actions using the live financial system.</div></div></div>
+    <div class="topbar"><div><h1>HFMS CFO</h1><div class="sub">Interactive finance manager for Happynet ” analyzes, communicates, advises, prepares reports and proposes controlled actions using the live financial system.</div></div></div>
     <div class="grid-3" style="margin-bottom:16px;">
       <div class="stat"><div class="stat-label">Source of truth</div><div class="stat-value">Financial Ledger</div><div class="hint">AI never replaces accounting records.</div></div>
       <div class="stat"><div class="stat-label">AI control</div><div class="stat-value">Approval-aware</div><div class="hint">Financial mutations require confirmation and RBAC.</div></div>
@@ -35,16 +35,16 @@ function viewAssistant(){
           <div style="align-self:${m.role==='user'?'flex-end':'flex-start'}; max-width:90%;">
             <div style="font-size:11px; color:var(--muted); margin-bottom:2px; text-transform:uppercase; letter-spacing:.04em;">${m.role==='user'?'You':'HFMS CFO'}${m.classification?` Â· ${m.classification}`:''}</div>
             <div style="white-space:pre-wrap; background:${m.role==='user'?'var(--gold-soft,#f4ecd8)':'#f4f4f2'}; border-radius:10px; padding:11px 14px; font-size:14px; line-height:1.55;">${String(m.content||'').replace(/</g,'&lt;')}</div>
-            ${m.citations?.length?`<div class="hint" style="margin-top:5px;">Evidence: ${m.citations.map(c=>`${String(c.source||'HFMS').replace(/</g,'&lt;')} â€” ${String(c.detail||'').replace(/</g,'&lt;')}`).join(' Â· ')}</div>`:''}${m.action?`<div style="margin-top:8px;"><button class="btn gold sm" data-cfo-confirm="${m.action.id}">Confirm action</button> <button class="btn ghost sm" data-cfo-cancel="${m.action.id}">Cancel</button></div>`:''}
+            ${m.citations?.length?`<div class="hint" style="margin-top:5px;">Evidence: ${m.citations.map(c=>`${String(c.source||'HFMS').replace(/</g,'&lt;')} ” ${String(c.detail||'').replace(/</g,'&lt;')}`).join(' Â· ')}</div>`:''}${m.action?`<div style="margin-top:8px;"><button class="btn gold sm" data-cfo-confirm="${m.action.id}">Confirm action</button> <button class="btn ghost sm" data-cfo-cancel="${m.action.id}">Cancel</button></div>`:''}
           </div>`).join('')}
-        ${assistantLoading ? `<div class="hint">HFMS CFO is analyzing the live financial contextâ€¦</div>` : ''}
+        ${assistantLoading ? `<div class="hint">HFMS CFO is analyzing the live financial context¦</div>` : ''}
         ${assistantError ? `<div class="hint" style="color:#c0392b;">${assistantError}</div>` : ''}
       </div>
       <form id="form-assistant" style="display:flex; gap:8px;">
-        <input type="text" name="question" placeholder="Ask HFMS CFO about revenue, expenses, Profit First, cash, Johnâ€™s loan, budgets, tax, reports or risksâ€¦" style="flex:1;" ${assistantLoading?'disabled':''} required>
+        <input type="text" name="question" placeholder="Ask HFMS CFO about revenue, expenses, Profit First, cash, John™s loan, budgets, tax, reports or risks¦" style="flex:1;" ${assistantLoading?'disabled':''} required>
         <button class="btn gold" type="submit" ${assistantLoading?'disabled':''}>Ask CFO</button>
       </form>
-      ${assistantConversationId?`<div class="hint" style="margin-top:8px;">Conversation saved in HFMS Â· ${assistantConversationId.slice(0,8)}â€¦</div>`:''}
+      ${assistantConversationId?`<div class="hint" style="margin-top:8px;">Conversation saved in HFMS Â· ${assistantConversationId.slice(0,8)}¦</div>`:''}
     </div>`;
 }
 async function askAssistant(question){
@@ -125,11 +125,11 @@ async function revokeAccess(userId, branchId){
 function viewStaff(){
   const { branches, grants, loading, error, formError } = staffState;
   return `
-    <div class="topbar"><div><h1>Staff &amp; Access</h1><div class="sub">Visible to Head Office only â€” controls who can see which branch, and at what role.</div></div></div>
+    <div class="topbar"><div><h1>Staff &amp; Access</h1><div class="sub">Visible to Head Office only ” controls who can see which branch, and at what role.</div></div></div>
 
     <div class="section-head"><h2>Branches</h2></div>
     <div class="card" style="margin-bottom:22px;">
-      ${loading && !branches ? `<span class="hint">Loadingâ€¦</span>` : (branches && branches.length ? `
+      ${loading && !branches ? `<span class="hint">Loading¦</span>` : (branches && branches.length ? `
         <table style="margin-bottom:16px;"><thead><tr><th>Name</th><th>Code</th></tr></thead>
         <tbody>${branches.map(b=>`<tr><td>${b.name}</td><td class="txt">${b.code}</td></tr>`).join('')}</tbody></table>
       ` : `<div class="hint" style="margin-bottom:16px;">No branches yet.</div>`)}
@@ -144,7 +144,7 @@ function viewStaff(){
     <div class="card">
       ${error ? `<div class="hint" style="color:#c0392b; margin-bottom:12px;">${error}</div>` : ''}
       ${formError ? `<div class="hint" style="color:#c0392b; margin-bottom:12px;">${formError}</div>` : ''}
-      ${loading && !grants ? `<span class="hint">Loadingâ€¦</span>` : `
+      ${loading && !grants ? `<span class="hint">Loading¦</span>` : `
       <div class="table-wrap"><table>
         <thead><tr><th>Person</th><th>Branch</th><th>Role</th><th></th></tr></thead>
         <tbody>

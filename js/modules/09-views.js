@@ -6,7 +6,7 @@ function viewDashboard(){
   const closed = state.closedMonths.includes(d.ym);
   return `
     <div class="topbar">
-      <div><h1>Monthly Dashboard</h1><div class="sub">Live view of ${monthLabel(d.ym)} â€” nothing here is manually edited.</div></div>
+      <div><h1>Monthly Dashboard</h1><div class="sub">Live view of ${monthLabel(d.ym)} ” nothing here is manually edited.</div></div>
       <div class="topbar-actions">
         <div class="month-pill ${closed?'closed':''}"><span class="dot">${ic('calendar',13)}</span>Day ${d.daysElapsed} of ${d.dim}</div>
         <button class="btn ghost sm no-print" id="btn-print-report">${ic('printer',14)}Print Monthly Report</button>
@@ -42,7 +42,7 @@ function viewDashboard(){
     <div class="narrative"><div class="narrative-icon">${ic('message',15)}</div>${narrativeText(d)}</div>
 
     <div class="section-head"><h2>Where today's shilling goes</h2>
-      <div class="toolbar"><span class="hint">Default split â€” edit in Settings</span></div>
+      <div class="toolbar"><span class="hint">Default split ” edit in Settings</span></div>
     </div>
     <div class="pf-bucket-row">
       <div class="pf-bucket" style="--tone:var(--gold-deep);"><div class="pf-bucket-icon">${ic('piggyBank',16)}</div><div class="label">Profit (${state.settings.pct_profit}%)</div><div class="amt">${KES(d.alloc.profit)}</div></div>
@@ -68,7 +68,7 @@ function renderCloseMonthModal(d){
     <div class="modal-backdrop" id="modal-backdrop">
       <div class="modal">
         <h3>Close ${monthLabel(d.ym)}?</h3>
-        <div class="sub" style="color:var(--muted); font-size:13.5px;">This snapshots the totals below into the Trend Archive. ${monthLabel(d.ym)} will then be locked â€” new entries for this month will be blocked.</div>
+        <div class="sub" style="color:var(--muted); font-size:13.5px;">This snapshots the totals below into the Trend Archive. ${monthLabel(d.ym)} will then be locked ” new entries for this month will be blocked.</div>
         <div class="totals">
           <div><span>Total Revenue</span><b class="num">${KES(d.totalRevenue)}</b></div>
           <div><span>Profit Reserved</span><b class="num">${KES(d.alloc.profit)}</b></div>
@@ -134,7 +134,7 @@ function viewDaily(){
       </form>
     </div>` : readOnlyNotice()}
 
-    <div class="section-head"><h2>${monthLabel(ym)} â€” entries &amp; allocation</h2>
+    <div class="section-head"><h2>${monthLabel(ym)} ” entries &amp; allocation</h2>
       <div class="toolbar"><button class="btn ghost sm" id="btn-export-revenue-csv">Export CSV</button></div>
     </div>
     <div class="table-wrap"><table>
@@ -153,7 +153,7 @@ function viewDaily(){
             <td>${KES0(alloc.opex)}</td>
             <td>${KES0(net)}</td>
             <td class="${variance<0?'neg':'pos'}">${variance<0?'-':'+'}${KES0(Math.abs(variance))}</td>
-            <td>${canWrite() ? `<button class="btn ghost sm" data-edit-revenue="${r.id}">Edit</button> <button class="btn ghost sm" data-del-revenue="${r.id}">Delete</button>` : 'â€”'}</td>
+            <td>${canWrite() ? `<button class="btn ghost sm" data-edit-revenue="${r.id}">Edit</button> <button class="btn ghost sm" data-del-revenue="${r.id}">Delete</button>` : '”'}</td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -231,14 +231,14 @@ function viewExpenses(){
 
     <div class="form-card">
       <h3>Import expenses from a spreadsheet</h3>
-      <div class="sub" style="margin-bottom:10px;">Upload an .xlsx or .csv export of your expense log (e.g. Tende Expense Log). Columns are matched by name â€” Date, Txn Ref, Account Used, Category, Description, Paid To, Amount (KES), Charges (KES), Owner/Related-Party Funded. Rows whose Txn Ref already exists â€” in the app or elsewhere in the same file â€” are skipped automatically, and the remaining rows are added in date order, oldest first.</div>
+      <div class="sub" style="margin-bottom:10px;">Upload an .xlsx or .csv export of your expense log (e.g. Tende Expense Log). Columns are matched by name ” Date, Txn Ref, Account Used, Category, Description, Paid To, Amount (KES), Charges (KES), Owner/Related-Party Funded. Rows whose Txn Ref already exists ” in the app or elsewhere in the same file ” are skipped automatically, and the remaining rows are added in date order, oldest first.</div>
       <input type="file" id="file-import" accept=".xlsx,.xls,.csv">
       <div id="import-status" style="margin-top:10px;"></div>
       ${importResult ? `
         <div class="import-summary">
           <div><span class="tag good">${importResult.imported} imported</span></div>
-          ${importResult.skippedDupe ? `<div><span class="tag neutral">${importResult.skippedDupe} skipped â€” duplicate Txn Ref</span></div>` : ''}
-          ${importResult.skippedInvalid ? `<div><span class="tag alert">${importResult.skippedInvalid} skipped â€” missing/invalid data</span></div>` : ''}
+          ${importResult.skippedDupe ? `<div><span class="tag neutral">${importResult.skippedDupe} skipped ” duplicate Txn Ref</span></div>` : ''}
+          ${importResult.skippedInvalid ? `<div><span class="tag alert">${importResult.skippedInvalid} skipped ” missing/invalid data</span></div>` : ''}
         </div>
         ${importResult.errors.length ? `<details style="margin-top:8px;"><summary style="cursor:pointer; color:var(--muted); font-size:12.5px;">Show skipped rows</summary><ul style="font-size:12.5px; color:var(--ink-soft);">${importResult.errors.map(e=>`<li>${e}</li>`).join('')}</ul></details>` : ''}
       ` : ''}
@@ -274,7 +274,7 @@ function viewExpenses(){
             <td>${KES0(e.amount_kes)}</td>
             <td>${KES0(e.charges_kes)}</td>
             <td>${KES0(e.amount_kes+e.charges_kes)}</td>
-            <td>${e.owner_funded? '<span class="tag neutral">Yes</span>':'â€”'}</td>
+            <td>${e.owner_funded? '<span class="tag neutral">Yes</span>':'”'}</td>
             <td class="txt">${statusTag(e.status)}</td>
             <td style="white-space:nowrap;">
               ${e.status==='pending_approval' && canApprove() ? `<button class="btn ghost sm" data-approve-expense="${e.id}">Approve</button> <button class="btn ghost sm" data-reject-expense="${e.id}">Reject</button> ` : ''}
@@ -293,7 +293,7 @@ async function handleExpenseImport(ev){
   const file = ev.target.files[0];
   if(!file) return;
   const statusEl = document.getElementById('import-status');
-  if(statusEl) statusEl.innerHTML = `<span class="hint">Reading ${file.name}â€¦</span>`;
+  if(statusEl) statusEl.innerHTML = `<span class="hint">Reading ${file.name}¦</span>`;
   try{
     const data = await file.arrayBuffer();
     const wb = XLSX.read(data, {type:'array', cellDates:true});
@@ -331,7 +331,7 @@ async function handleExpenseImport(ev){
       }
     }
     if(headerRowIdx===-1){
-      importResult = {imported:0, skippedDupe:0, skippedInvalid:0, errors:['Could not find a header row containing a "Date" column and an "Amount" column â€” check the file matches the expected layout.']};
+      importResult = {imported:0, skippedDupe:0, skippedInvalid:0, errors:['Could not find a header row containing a "Date" column and an "Amount" column ” check the file matches the expected layout.']};
       if(statusEl) statusEl.innerHTML='';
       render(); return;
     }
@@ -353,7 +353,7 @@ async function handleExpenseImport(ev){
       const dateStr = dateObj.toISOString().slice(0,10);
       const txn_ref = String(rawRef).trim();
       if(seenRefs.has(txn_ref.toLowerCase())){
-        skippedDupe++; errors.push(`Row ${r+1}: Txn Ref "${txn_ref}" already exists â€” skipped`); continue;
+        skippedDupe++; errors.push(`Row ${r+1}: Txn Ref "${txn_ref}" already exists ” skipped`); continue;
       }
       const amount = Number(String(rawAmount).replace(/[^0-9.\-]/g,'')) || 0;
       const charges = headerMap.charges_kes!=null ? (Number(String(row[headerMap.charges_kes]||'0').replace(/[^0-9.\-]/g,''))||0) : 0;
@@ -374,13 +374,13 @@ async function handleExpenseImport(ev){
     newRows.sort((a,b)=>a.date<b.date?-1:1);
 
     // Send the whole batch through the bulk import endpoint rather than
-    // letting the generic background sync create them one at a time â€” this
+    // letting the generic background sync create them one at a time ” this
     // re-checks duplicates server-side too (catches anything imported by
     // someone else since this session loaded) and reports exactly what it
     // skipped and why.
     let confirmedRows = [];
     if(newRows.length){
-      if(statusEl) statusEl.innerHTML = `<span class="hint">Saving ${newRows.length} rowsâ€¦</span>`;
+      if(statusEl) statusEl.innerHTML = `<span class="hint">Saving ${newRows.length} rows¦</span>`;
       try{
         const entries = newRows.map(CORE_ENTITY_CONFIG.expenses.toApi);
         const apiResult = await apiCreate('/api/expenses', { branch_id: state.branchId, entries });
@@ -463,7 +463,7 @@ function viewDebt(){
             <td>${KES0(l.original_principal_kes)}</td><td>${KES0(l.current_balance_kes)}</td>
             <td>${l.annual_interest_rate_pct||0}%</td><td>${KES0(l.min_monthly_payment_kes)}</td>
             <td class="txt"><span class="tag ${l.status==='Paid Off'?'good':'neutral'}">${l.status}</span></td>
-            <td>${canWrite() ? `<button class="btn ghost sm" data-edit-loan="${l.id}">Edit</button> <button class="btn ghost sm" data-del-loan="${l.id}">Delete</button>` : 'â€”'}</td>
+            <td>${canWrite() ? `<button class="btn ghost sm" data-edit-loan="${l.id}">Edit</button> <button class="btn ghost sm" data-del-loan="${l.id}">Delete</button>` : '”'}</td>
           </tr>`).join('')}
       </tbody>
     </table></div>
@@ -493,7 +493,7 @@ function viewDebt(){
             <td class="txt">${loanName(p.loan_id)}</td>
             <td>${KES0(p.amount_kes)}</td>
             <td class="txt">${p.note||''}</td>
-            <td>${canWrite() ? `<button class="btn ghost sm" data-edit-payment="${p.id}">Edit</button> <button class="btn ghost sm" data-del-payment="${p.id}">Delete</button>` : 'â€”'}</td>
+            <td>${canWrite() ? `<button class="btn ghost sm" data-edit-payment="${p.id}">Edit</button> <button class="btn ghost sm" data-del-payment="${p.id}">Delete</button>` : '”'}</td>
           </tr>`).join('')}
       </tbody>
     </table></div>
@@ -509,9 +509,9 @@ function viewTax(){
     <div class="topbar"><div><h1>Tax Intelligence & Compliance</h1><div class="sub">Professional tax control centre. HFMS tracks obligations, periods, filing evidence, payments, reserve coverage and compliance status. Tax liabilities are never invented by the system.</div></div></div>
 
     <div class="grid kpi" id="tax-intelligence-kpis">
-      <div class="card kpi"><h3>Outstanding Tax</h3><div class="big" id="tax-outstanding">Loadingâ€¦</div></div>
-      <div class="card kpi"><h3>Due in 30 Days</h3><div class="big" id="tax-due30">Loadingâ€¦</div></div>
-      <div class="card kpi"><h3>Overdue</h3><div class="big" id="tax-overdue">Loadingâ€¦</div></div>
+      <div class="card kpi"><h3>Outstanding Tax</h3><div class="big" id="tax-outstanding">Loading¦</div></div>
+      <div class="card kpi"><h3>Due in 30 Days</h3><div class="big" id="tax-due30">Loading¦</div></div>
+      <div class="card kpi"><h3>Overdue</h3><div class="big" id="tax-overdue">Loading¦</div></div>
       <div class="card kpi"><h3>Profit First Tax Reserve</h3><div class="big">${KES(reserveBalance)}</div></div>
     </div>
 
@@ -537,7 +537,7 @@ function viewTax(){
       <h3>Tax Period / Liability Register</h3>
       <p class="hint">Create a period only when the liability is known or intentionally set to NIL. The system can calculate deadlines from configured rules but will not fabricate the tax amount.</p>
       <div class="form-row">
-        <div><label>Tax obligation</label><select id="tax-period-obligation"><option value="">Loadingâ€¦</option></select></div>
+        <div><label>Tax obligation</label><select id="tax-period-obligation"><option value="">Loading¦</option></select></div>
         <div><label>Period start</label><input id="tax-period-start" type="date"></div>
         <div><label>Period end</label><input id="tax-period-end" type="date"></div>
         <div><label>Amount due (KES)</label><input id="tax-period-amount" type="number" step="0.01" min="0" value="0"></div>
@@ -553,14 +553,14 @@ function viewTax(){
 
     <div class="form-card">
       <h3>Compliance Command Centre</h3>
-      <div id="tax-intelligence-table" style="overflow:auto">Loading tax intelligenceâ€¦</div>
+      <div id="tax-intelligence-table" style="overflow:auto">Loading tax intelligence¦</div>
     </div>
 
     <div class="form-card">
       <h3>Record Filing / Payment / Evidence</h3>
       <p class="hint">These actions create an auditable record. They do not submit returns or payments to KRA.</p>
       <div class="form-row">
-        <div><label>Tax period</label><select id="tax-action-period"><option value="">Loadingâ€¦</option></select></div>
+        <div><label>Tax period</label><select id="tax-action-period"><option value="">Loading¦</option></select></div>
         <div><label>Filing reference</label><input id="tax-filing-reference" placeholder="Acknowledgement / return reference"></div>
         <div><label>Payment amount (KES)</label><input id="tax-payment-amount" type="number" step="0.01" min="0"></div>
         <div><label>Payment date</label><input id="tax-payment-date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
@@ -578,13 +578,13 @@ function viewTax(){
 
     <div class="form-card">
       <h3>Profit First Tax Reserve Coverage</h3>
-      <div id="tax-reserve-analysis" class="narrative">Calculating reserve coverageâ€¦</div>
+      <div id="tax-reserve-analysis" class="narrative">Calculating reserve coverage¦</div>
     </div>
 
     <div class="form-card">
       <h3>Authoritative Deadline Rules</h3>
       <p class="hint">These are reference rules sourced from KRA. Tax law can change; HFMS stores the source and verification date so management can review the rule before relying on it.</p>
-      <div id="tax-rules-table" style="overflow:auto">Loadingâ€¦</div>
+      <div id="tax-rules-table" style="overflow:auto">Loading¦</div>
     </div>
 
     <div class="section-head"><h2>Legacy obligation register</h2></div>
@@ -602,7 +602,7 @@ function viewTax(){
 function viewArchive(){
   const rows = state.monthlyArchive.slice().sort((a,b)=>a.month<b.month?1:-1);
   return `
-    <div class="topbar"><div><h1>Trend Archive</h1><div class="sub">One row per closed month. Read-only â€” created by "Close Month" on the Dashboard.</div></div>
+    <div class="topbar"><div><h1>Trend Archive</h1><div class="sub">One row per closed month. Read-only ” created by "Close Month" on the Dashboard.</div></div>
       <div class="topbar-actions"><button class="btn ghost sm" id="btn-export-archive-xlsx">Export .xlsx</button></div>
     </div>
 
@@ -612,7 +612,7 @@ function viewArchive(){
       <div class="chart-box"><h3>Revenue Achievement %</h3><div class="chart-canvas-wrap"><canvas id="chart-rev-achieve"></canvas></div></div>
     </div>
 
-    <div class="section-head"><h2>Archived months â€” budget vs. actual</h2></div>
+    <div class="section-head"><h2>Archived months ” budget vs. actual</h2></div>
     <div class="table-wrap"><table>
       <thead><tr><th class="txt">Month</th><th>Revenue</th><th>Daily Avg</th><th>Profit</th><th>Owner/Debt</th><th>Tax Reserve</th><th>OpEx Budget</th><th>Actual OpEx</th><th>Variance</th><th>OpEx Ratio</th><th>Rev Achv.</th></tr></thead>
       <tbody>
@@ -632,8 +632,8 @@ function viewArchive(){
     </table></div>
 
     ${state.isHeadOffice && state.allBranches && state.allBranches.length > 1 ? `
-    <div class="section-head"><h2>Branch comparison â€” current month</h2>
-      <div class="toolbar"><span class="hint">${branchCompareState.loading ? 'Loadingâ€¦' : ''}</span></div>
+    <div class="section-head"><h2>Branch comparison ” current month</h2>
+      <div class="toolbar"><span class="hint">${branchCompareState.loading ? 'Loading¦' : ''}</span></div>
     </div>
     <div class="card">
       ${branchCompareState.error ? `<div class="hint" style="color:#c0392b;">${branchCompareState.error}</div>` : ''}
@@ -720,7 +720,7 @@ function viewSettings(){
           <div><label>Tax Reserve %</label><input type="number" name="pct_tax" min="0" max="100" step="0.5" value="${s.pct_tax}"></div>
           <div><label>OpEx %</label><input type="number" name="pct_opex" min="0" max="100" step="0.5" value="${s.pct_opex}"></div>
         </div>
-        <div class="hint" style="margin-bottom:12px;">Current sum: <b>${pctSum}%</b> ${pctSum!==100?'â€” must equal 100% to save':''}</div>
+        <div class="hint" style="margin-bottom:12px;">Current sum: <b>${pctSum}%</b> ${pctSum!==100?'” must equal 100% to save':''}</div>
         <div class="form-row">
           <div><label>Debt paydown split % (of Owner Pay &amp; Debt bucket)</label><input type="number" name="debt_paydown_split_pct" min="0" max="100" value="${s.debt_paydown_split_pct}"></div>
           <div><label>Monthly revenue target (KES)</label><input type="number" name="monthly_revenue_target_kes" min="0" value="${s.monthly_revenue_target_kes}"></div>
@@ -753,7 +753,7 @@ function viewSettings(){
     <div class="section-head"><h2>Data</h2></div>
     <div class="card" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
       <button class="btn ghost" id="btn-export">Export all data (JSON)</button>
-      <span class="hint">Everything lives in one place â€” no duplicate copies to keep in sync.</span>
+      <span class="hint">Everything lives in one place ” no duplicate copies to keep in sync.</span>
     </div>
   `;
 }

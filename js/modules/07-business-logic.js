@@ -22,7 +22,7 @@ function currentOpenMonth(){
 function revenueForMonth(ym){ return state.dailyRevenue.filter(r => monthKey(r.date) === ym); }
 // Pending-approval and rejected expenses are real rows (visible, editable,
 // approvable) but shouldn't move any money total until a Branch Manager or
-// Head Office approves them â€” this is the one place that filter needs to
+// Head Office approves them ” this is the one place that filter needs to
 // live, since every other total is built from these two functions.
 function postedExpenses(){ return state.expenses.filter(e => e.status !== 'pending_approval' && e.status !== 'rejected'); }
 function statusTag(status){
@@ -181,7 +181,7 @@ function parseUtilityCSV(text){
 async function handleFinancialImportFiles(files){
   const status=document.getElementById('financial-import-status');
   if(!files.length) return;
-  status.innerHTML='Processing filesâ€¦';
+  status.innerHTML='Processing files¦';
   const reports=[];
   try{
     for(const file of files){
@@ -205,7 +205,7 @@ function viewFinancialImports(){
   return `
   <div class="topbar"><div><h1>Financial Data Center</h1>
     <div class="sub">Single source of truth for Happynet revenue, expenses and owner funding.</div></div></div>
-  <div class="narrative"><b>Automatic classification</b> â€” Organization Utility settlements are posted as revenue. Successful Tende outgoing payments are posted as expenses. Successful Tende incoming payments are posted as <b>John / Owner Loan Funding</b>. The raw payer details are retained for audit and verification.</div>
+  <div class="narrative"><b>Automatic classification</b> ” Organization Utility settlements are posted as revenue. Successful Tende outgoing payments are posted as expenses. Successful Tende incoming payments are posted as <b>John / Owner Loan Funding</b>. The raw payer details are retained for audit and verification.</div>
   <div class="section-head"><h2>Import official source files</h2></div>
   <div class="form-card">
     <div class="form-row">
@@ -223,7 +223,7 @@ function viewFinancialImports(){
       <tr><td class="txt">Organization Utility</td><td class="txt">Completed settlement to organization</td><td class="txt pos">Revenue</td></tr>
       <tr><td class="txt">Tende</td><td class="txt">Successful outgoing payment</td><td class="txt neg">Expense + charge</td></tr>
       <tr><td class="txt">Tende</td><td class="txt">Successful incoming payment</td><td class="txt">John / Owner loan funding</td></tr>
-      <tr><td class="txt">Tende</td><td class="txt">Other incoming payment</td><td class="txt">Review queue â€” never assumed revenue</td></tr>
+      <tr><td class="txt">Tende</td><td class="txt">Other incoming payment</td><td class="txt">Review queue ” never assumed revenue</td></tr>
     </tbody>
   </table></div>`;
 }

@@ -47,7 +47,7 @@ function exportRevenueCsv(){
   downloadText(`happynet-revenue-${todayISO()}.csv`, csv);
 }
 
-/* ---------------- .xlsx export (Phase 5) â€” uses the SheetJS build already
+/* ---------------- .xlsx export (Phase 5) ” uses the SheetJS build already
    loaded for the Tende import parser, so no extra dependency. ---------------- */
 function exportArchiveXlsx(){
   const rows = state.monthlyArchive.slice().sort((a,b)=>a.month<b.month?1:-1);
@@ -128,7 +128,7 @@ function attachmentsPanelHtml(){
   return `<div class="panel" style="margin:10px 0;">
     <div class="section-head"><h3 style="margin:0;">Receipts / attachments</h3><button class="btn ghost sm" data-close-attachments>Close</button></div>
     ${error ? `<div class="hint" style="color:#c0392b;">${error}</div>` : ''}
-    ${loading ? '<span class="hint">Workingâ€¦</span>' :
+    ${loading ? '<span class="hint">Working¦</span>' :
       (items && items.length
         ? items.map(a => `<div class="item"><a href="${a.url || '#'}" target="_blank" rel="noopener">${(a.storage_path||'').split('/').pop()}</a> ${canWrite() ? `<button class="btn ghost sm" data-del-attachment="${a.id}">Remove</button>` : ''}</div>`).join('')
         : '<span class="hint">No attachments yet.</span>')}

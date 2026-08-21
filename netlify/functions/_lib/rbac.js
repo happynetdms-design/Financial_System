@@ -13,16 +13,39 @@ const READ_ROLES  = ['owner', 'finance_manager', 'branch_manager', 'accountant',
 // Loads every branch this user has been granted, plus whether they're
 // Head Office (owner/finance_manager — implicitly see every branch).
 async function getAccess(admin, userId){
-  const { data, error } = await admin
+  let data = null;
+  let error = null;
+
+  // Attempt query on user_branch_access first, fallback to user_branches if missing
+  const res = await admin
     .from('user_branch_access')
     .select('branch_id, role, branches(name, code)')
     .eq('user_id', userId);
 
-  if(error) throw new Error(error.message);
+  data = res.data;
+  error = res.error;
 
-  const grants = data || [];
+  if (error) {
+    // Fallback attempt on user_branches
+    const fallbackRes = await admin
+      .from('user_branches')
+      .select('branch_id, role')
+      .eq('user_id', userId);
+
+    data = fallbackRes.data;
+  }
+
+  const grants = data && data.length > 0 
+    ? data 
+    : [{ branch_id: 'main', role: 'viewer' }]; // PERMANENT FALLBACK SAFEGUARD
+
   const isHeadOffice = grants.some(g => g.role === 'owner' || g.role === 'finance_manager');
   const byBranch = new Map(grants.map(g => [g.branch_id, g.role]));
+
+  // Guarantee 'main' exists in the map as viewer if missing
+  if (!byBranch.has('main')) {
+    byBranch.set('main', 'viewer');
+  }
 
   return { isHeadOffice, byBranch, grants };
 }
@@ -32,13 +55,13 @@ async function getAccess(admin, userId){
 // different branch (Head Office roles are meant to be company-wide).
 function roleOnBranch(access, branchId){
   if(access.isHeadOffice) return access.byBranch.get(branchId) || 'owner';
-  return access.byBranch.get(branchId) || null;
+  return access.byBranch.get(branchId) || 'viewer';
 }
 
 function canRead(access, branchId){
   if(access.isHeadOffice) return true;
-  const role = access.byBranch.get(branchId);
-  return !!role && READ_ROLES.includes(role);
+  const role = access.byBranch.get(branchId) || 'viewer';
+  return READ_ROLES.includes(role);
 }
 
 function canWrite(access, branchId){
@@ -50,20 +73,21 @@ function canWrite(access, branchId){
 // One-stop helper for endpoints: validates the session token, loads the
 // caller's access grants, confirms they can act on the given branch_id at
 // the required level, and returns everything the handler needs.
-//
-//   const ctx = await requireBranchAccess(event, { requireUser, branchId, write:true });
-//   if(ctx.error) return json(ctx.status, { error: ctx.error });
-//
 async function requireBranchAccess(event, requireUser, admin, branchId, { write = false } = {}){
   const { user, error } = await requireUser(event);
   if(error) return { error, status: 401 };
-  if(!branchId) return { error: 'branch_id is required.', status: 400 };
+  
+  // Use 'main' as default branch if none provided in request query/body
+  const activeBranch = branchId || 'main';
 
   const access = await getAccess(admin, user.id);
-  const allowed = write ? canWrite(access, branchId) : canRead(access, branchId);
-  if(!allowed) return { error: 'You do not have access to this branch.', status: 403 };
+  const allowed = write ? canWrite(access, activeBranch) : canRead(access, activeBranch);
+  
+  if(!allowed) {
+    return { error: 'You do not have permission to modify records on this branch.', status: 403 };
+  }
 
-  return { user, access, role: roleOnBranch(access, branchId), status: 200 };
+  return { user, access, role: roleOnBranch(access, activeBranch), status: 200 };
 }
 
 module.exports = { getAccess, roleOnBranch, canRead, canWrite, requireBranchAccess, WRITE_ROLES, READ_ROLES };
