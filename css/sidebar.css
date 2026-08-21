@@ -285,3 +285,43 @@ nav button.active svg {
   color: #fff;
   background: rgba(255, 255, 255, 0.08);
 }
+/* Ensure padding doesn't inflate layout dimensions */
+.sidebar, 
+.sidebar * {
+  box-sizing: border-box;
+}
+
+/* Prevent flexbox child overflow in profile container */
+.profile-chip {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.profile-info {
+  flex: 1;
+  min-width: 0; /* Ensures inner text clips instead of expanding the parent */
+}
+
+.profile-email {
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Safely converts myrastudent23@gmail.com to myrastudent23... */
+}
+
+/* Fix "Save failed" status text floating outside boundaries */
+.sidebar-foot .save-status,
+.sidebar-foot [id*="save-status"],
+.sidebar-foot .status-msg {
+  display: block;
+  font-size: 10.5px;
+  color: #ff6b6b;
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}

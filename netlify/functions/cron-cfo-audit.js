@@ -1,4 +1,4 @@
-const { adminClient } = require('./_lib/supabase');
+import { adminClient } from './_lib/supabase.js';
 
 async function auditBranch(admin, branchId) {
   const thirtyDaysAgo = new Date();
@@ -62,7 +62,7 @@ async function auditBranch(admin, branchId) {
   return { branch_id: branchId, alerts_generated: alerts.length };
 }
 
-exports.handler = async (event, context) => {
+export const handler = async (event, context) => {
   const admin = adminClient();
 
   try {

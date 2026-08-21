@@ -47,7 +47,7 @@ function exportRevenueCsv(){
   downloadText(`happynet-revenue-${todayISO()}.csv`, csv);
 }
 
-/* ---------------- .xlsx export (Phase 5) ” uses the SheetJS build already
+/* ---------------- .xlsx export (Phase 5) — uses the SheetJS build already
    loaded for the Tende import parser, so no extra dependency. ---------------- */
 function exportArchiveXlsx(){
   const rows = state.monthlyArchive.slice().sort((a,b)=>a.month<b.month?1:-1);
@@ -128,7 +128,7 @@ function attachmentsPanelHtml(){
   return `<div class="panel" style="margin:10px 0;">
     <div class="section-head"><h3 style="margin:0;">Receipts / attachments</h3><button class="btn ghost sm" data-close-attachments>Close</button></div>
     ${error ? `<div class="hint" style="color:#c0392b;">${error}</div>` : ''}
-    ${loading ? '<span class="hint">Working¦</span>' :
+    ${loading ? '<span class="hint">Working…</span>' :
       (items && items.length
         ? items.map(a => `<div class="item"><a href="${a.url || '#'}" target="_blank" rel="noopener">${(a.storage_path||'').split('/').pop()}</a> ${canWrite() ? `<button class="btn ghost sm" data-del-attachment="${a.id}">Remove</button>` : ''}</div>`).join('')
         : '<span class="hint">No attachments yet.</span>')}
@@ -145,4 +145,86 @@ function wireAttachmentsPanel(){
   if(fileInput) fileInput.addEventListener('change', (ev) => {
     uploadAttachment(attachmentsState.targetType, attachmentsState.targetId, ev.target.files[0]);
   });
+}
+
+/* ---------------- Flexible Case-Insensitive Importer ---------------- */
+function normalizeHeader(str) {
+  return String(str || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function findColumnIndex(headers, targetVariations) {
+  const normalizedTargets = targetVariations.map(normalizeHeader);
+  return headers.findIndex(h => normalizedTargets.includes(normalizeHeader(h)));
+}
+
+async function importExpensesFromFile(file) {
+  if (!file) return;
+
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data, { type: 'array' });
+  const firstSheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[firstSheetName];
+  const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+  if (!rawRows || rawRows.length < 2) {
+    throw new Error('The uploaded file is empty or missing data rows.');
+  }
+
+  const headers = rawRows[0];
+
+  const dateIdx = findColumnIndex(headers, ['Date', 'date', 'DATE', 'Txn Date', 'Transaction Date', 'Date Logged']);
+  const amountIdx = findColumnIndex(headers, ['Amount', 'amount', 'AMOUNT', 'Amount (KES)', 'Total', 'Total (KES)', 'Cost']);
+  const txnRefIdx = findColumnIndex(headers, ['Txn Ref', 'txn_ref', 'TxnRef', 'Reference', 'Receipt No', 'Ref']);
+  const accountIdx = findColumnIndex(headers, ['Account Used', 'account_used', 'Account', 'Payment Method', 'Source']);
+  const categoryIdx = findColumnIndex(headers, ['Category', 'category', 'Expense Category', 'Type']);
+  const descIdx = findColumnIndex(headers, ['Description', 'description', 'Details', 'Notes', 'Memo']);
+  const paidToIdx = findColumnIndex(headers, ['Paid To', 'paid_to', 'Vendor', 'Payee', 'Supplier']);
+  const chargesIdx = findColumnIndex(headers, ['Charges (KES)', 'charges', 'Charges', 'Fee', 'Fees']);
+  const ownerFundedIdx = findColumnIndex(headers, ['Owner/Related-Party Funded', 'owner_funded', 'Owner Funded', 'Personal Funds']);
+
+  if (dateIdx === -1 || amountIdx === -1) {
+    throw new Error('Could not find a header row containing "Date" and "Amount" columns. Check your file layout.');
+  }
+
+  const parsedExpenses = [];
+  const skippedRows = [];
+
+  for (let i = 1; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    if (!row || row.every(cell => String(cell).trim() === '')) continue;
+
+    const rawDate = row[dateIdx];
+    const rawAmount = row[amountIdx];
+
+    if (!rawDate || rawAmount === '' || rawAmount === null || isNaN(Number(rawAmount))) {
+      skippedRows.push({ row: i + 1, reason: 'Missing valid Date or Amount value.' });
+      continue;
+    }
+
+    let formattedDate = rawDate;
+    if (typeof rawDate === 'number') {
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      formattedDate = new Date(excelEpoch.getTime() + rawDate * 86400000).toISOString().split('T')[0];
+    } else {
+      formattedDate = String(rawDate).trim();
+    }
+
+    parsedExpenses.push({
+      date: formattedDate,
+      txn_ref: txnRefIdx !== -1 ? String(row[txnRefIdx] || '').trim() : '',
+      account_used: accountIdx !== -1 ? String(row[accountIdx] || '').trim() : 'M-Pesa Till',
+      category: categoryIdx !== -1 ? String(row[categoryIdx] || '').trim() : 'Uncategorized',
+      description: descIdx !== -1 ? String(row[descIdx] || '').trim() : '',
+      paid_to: paidToIdx !== -1 ? String(row[paidToIdx] || '').trim() : '',
+      amount_kes: Math.abs(Number(rawAmount)),
+      charges_kes: chargesIdx !== -1 ? Math.abs(Number(row[chargesIdx]) || 0) : 0,
+      owner_funded: ownerFundedIdx !== -1 ? String(row[ownerFundedIdx]).toLowerCase().includes('yes') || row[ownerFundedIdx] === true : false
+    });
+  }
+
+  return { imported: parsedExpenses, skipped: skippedRows };
+}
+
+if (typeof window !== 'undefined') {
+  window.importExpensesFromFile = importExpensesFromFile;
 }

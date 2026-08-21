@@ -212,5 +212,5 @@ exports.handler = async event => {
     rows_created: result.created.length, rows_skipped: result.skipped.length,
     rows_review: result.review.length, status: result.errors.length ? 'completed_with_errors' : 'completed'
   }).eq('id', batchId);
-  return json(200, { batch_id: batchId, ...result });
+  return json(200, { batch_id: batchId, ...result, inserted: result.created });
 };

@@ -180,12 +180,7 @@ function showImportSummary(report){
   });
 }
 function parseTendeCSV(text){
-  return rowsToObjects(parseCSVRobust(text)).map(r=>({
-    source_ref:r['REF'], ref:r['REF'], date_initiated:r['DATE INITIATED'],
-    service:r['SERVICE'], amount:r['AMOUNT'], charge:r['CHARGE'], receiver:r['RECEIVER'],
-    name:r['NAME'], remark:r['REMARK'], ref_no:r['REF NO'], status:r['STATUS'],
-    status_message:r['STATUS MESSAGE']
-  }));
+  return rowsToObjects(parseCSVRobust(text)).map(r=>({ source_ref:r['REF'], ref:r['REF'], date_initiated:r['DATE INITIATED'], service:r['SERVICE'], amount:r['AMOUNT'], charge:r['CHARGE'], receiver:r['RECEIVER'], name:r['NAME'], remark:r['REMARK'], ref_no:r['REF NO'], status:r['STATUS'], status_message:r['STATUS MESSAGE'] }));
 }
 function parseUtilityCSV(text){
   const rows=parseCSVRobust(text);
@@ -206,20 +201,24 @@ async function handleFinancialImportFiles(files){
   const reports=[];
   try{
     for(const file of files){
-      const text=await file.text();
-      const lower=file.name.toLowerCase();
-      let source, rows;
-      if(lower.includes('utilityaccount') || text.includes('Utility Account to Organization Settlement Account')) {
-        source='organization_utility'; rows=parseUtilityCSV(text);
-      } else if(lower.includes('tende') || text.includes('DATE INITIATED') && text.includes('SERVICE')) {
-        source='tende'; rows=parseTendeCSV(text);
-      } else throw new Error(`${file.name}: unsupported financial export.`);
-      if(!await showImportSummary(validateImportRows(source, rows))) throw new Error('Import cancelled.');
-      const r=await importFinancialSource(source,file.name,rows);
-      reports.push(`${file.name}: ${r.created.length} posted, ${r.skipped.length} duplicate/skipped, ${r.review.length} held for review, ${r.errors.length} errors`);
+      const parsed = await parseFinancialExport(file, 'financial');
+      const source = parsed.source;
+      if(!['tende', 'organization_utility'].includes(source)) throw new Error(`${file.name}: could not identify a supported financial export.`);
+      const summary = validateImportRows(source, parsed.rows);
+      summary.missingRows = parsed.skipped.map(item => item.row);
+      if(!await showImportSummary(summary)) throw new Error('Import cancelled.');
+      const r=await importFinancialSource(source,file.name,parsed.rows);
+      reports.push({
+        file: file.name,
+        imported: (r.inserted || r.created || []).length,
+        duplicate: (r.skipped || []).length,
+        review: (r.review || []).length,
+        invalid: parsed.skipped.length,
+        details: [...parsed.skipped.map(item => `Row ${item.row}: ${item.reason}`), ...(r.skipped || []).map(item => `${item.ref || 'Row'}: ${item.reason || 'duplicate reference'}`), ...(r.errors || []).map(item => `${item.ref || 'Row'}: ${item.error || 'import error'}`)]
+      });
     }
-    status.innerHTML=reports.map(x=>`<div class="tag good">${x}</div>`).join('');
-    if(typeof loadData==='function') await loadData();
+    status.innerHTML=reports.map(x=>`<div class="import-summary"><div><span class="tag good">${x.imported} imported</span> <span class="tag neutral">${x.duplicate} skipped - duplicate Txn Ref</span> <span class="tag alert">${x.invalid} skipped - invalid date/amount</span></div><div class="hint">${x.file}: ${x.review} held for review</div>${x.details.length ? `<details><summary>Show skipped rows</summary><ul>${x.details.map(detail=>`<li>${detail}</li>`).join('')}</ul></details>` : ''}</div>`).join('');
+    if(typeof loadState==='function') await loadState(state.branchId);
     render();
   }catch(e){status.innerHTML=`<div class="err-msg">${e.message}</div>`;}
 }
@@ -231,8 +230,8 @@ function viewFinancialImports(){
   <div class="section-head"><h2>Import official source files</h2></div>
   <div class="form-card">
     <div class="form-row">
-      <div><label>Tende payments export</label><input id="import-tende" type="file" accept=".csv"></div>
-      <div><label>Organization Utility Account export</label><input id="import-utility" type="file" accept=".csv"></div>
+      <div><label>Tende payments export</label><input id="import-tende" type="file" accept=".csv,.xlsx,.xls"></div>
+      <div><label>Organization Utility Account export</label><input id="import-utility" type="file" accept=".csv,.xlsx,.xls"></div>
     </div>
     <div class="hint">Upload the files exactly as downloaded. Do not edit, rename columns, or manually calculate totals. The importer is duplicate-safe.</div>
     <div style="margin-top:14px"><button class="btn gold" id="btn-run-financial-import">Import & Reconcile</button></div>

@@ -17,6 +17,7 @@
     '07-business-logic.js',
     'profile.js',
     'admin.js',
+    '11-financial-parser.js',
     '08-control-center.js',
     '09-views.js',
     '10-wiring-boot.js'

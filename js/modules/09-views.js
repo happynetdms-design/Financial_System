@@ -293,119 +293,65 @@ async function handleExpenseImport(ev){
   const file = ev.target.files[0];
   if(!file) return;
   const statusEl = document.getElementById('import-status');
-  if(statusEl) statusEl.innerHTML = `<span class="hint">Reading ${file.name}¦</span>`;
+  if(statusEl) statusEl.innerHTML = `<span class="hint">Reading ${file.name}...</span>`;
   try{
-    const data = await file.arrayBuffer();
-    const wb = XLSX.read(data, {type:'array', cellDates:true});
-    const wsName = wb.SheetNames.find(n=>/expense|tende/i.test(n)) || wb.SheetNames[0];
-    const ws = wb.Sheets[wsName];
-    const grid = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
-
-    const wants = {
-      date: /^date$/i,
-      txn_ref: /txn.*ref|reference/i,
-      account_used: /account/i,
-      category: /categor/i,
-      description: /descri/i,
-      paid_to: /paid ?to/i,
-      amount_kes: /^amount\b|amount.*kes/i,
-      charges_kes: /charge/i,
-      owner_funded: /owner.*funded|related.?party/i
-    };
-
-    let headerRowIdx = -1, headerMap = {};
-    for(let r=0;r<Math.min(grid.length,25);r++){
-      const row = grid[r]||[];
-      const rowStr = row.map(c=>String(c||'').trim());
-      const hasDate = rowStr.some(c=>/^date$/i.test(c));
-      const hasAmount = rowStr.some(c=>/amount/i.test(c));
-      if(hasDate && hasAmount){
-        headerRowIdx = r;
-        row.forEach((cell,ci)=>{
-          const c = String(cell||'').trim();
-          for(const [key,re] of Object.entries(wants)){
-            if(re.test(c) && !(key in headerMap)) headerMap[key]=ci;
-          }
-        });
-        break;
-      }
-    }
-    if(headerRowIdx===-1){
-      importResult = {imported:0, skippedDupe:0, skippedInvalid:0, errors:['Could not find a header row containing a "Date" column and an "Amount" column ” check the file matches the expected layout.']};
-      if(statusEl) statusEl.innerHTML='';
-      render(); return;
-    }
-
-    let imported=0, skippedDupe=0, skippedInvalid=0; const errors=[];
-    const seenRefs = new Set(state.expenses.map(e=>e.txn_ref.toLowerCase()));
+    const parsed = await parseFinancialExport(file, 'expense');
+    let skippedDupe = 0;
+    const errors = parsed.skipped.map(item => `Row ${item.row}: ${item.reason}`);
+    let skippedInvalid = parsed.skipped.length;
+    const seenRefs = new Set(state.expenses.map(e => String(e.txn_ref || '').toLowerCase()));
     const newRows = [];
-    for(let r=headerRowIdx+1;r<grid.length;r++){
-      const row = grid[r]||[];
-      if(row.every(c=>c===null||c==='')) continue;
-      const rawDate = headerMap.date!=null ? row[headerMap.date] : null;
-      const rawRef = headerMap.txn_ref!=null ? row[headerMap.txn_ref] : null;
-      const rawAmount = headerMap.amount_kes!=null ? row[headerMap.amount_kes] : null;
-      if(rawDate==null || rawAmount==null || rawRef==null || String(rawRef).trim()===''){
-        skippedInvalid++; continue;
-      }
-      let dateObj = rawDate instanceof Date ? rawDate : new Date(rawDate);
-      if(isNaN(dateObj)){ skippedInvalid++; continue; }
-      const dateStr = dateObj.toISOString().slice(0,10);
-      const txn_ref = String(rawRef).trim();
+    for(const row of parsed.rows){
+      const txn_ref = row.source_ref.toLowerCase();
       if(seenRefs.has(txn_ref.toLowerCase())){
-        skippedDupe++; errors.push(`Row ${r+1}: Txn Ref "${txn_ref}" already exists ” skipped`); continue;
+        skippedDupe++;
+        errors.push(`Row ${row.row_number}: Txn Ref "${row.source_ref}" already exists - skipped`);
+        continue;
       }
-      const amount = Number(String(rawAmount).replace(/[^0-9.\-]/g,'')) || 0;
-      const charges = headerMap.charges_kes!=null ? (Number(String(row[headerMap.charges_kes]||'0').replace(/[^0-9.\-]/g,''))||0) : 0;
-      const ownerRaw = headerMap.owner_funded!=null ? String(row[headerMap.owner_funded]||'').trim().toUpperCase() : '';
       newRows.push({
-        id:uid(), date:dateStr, txn_ref,
-        account_used: headerMap.account_used!=null && row[headerMap.account_used] ? row[headerMap.account_used] : 'Bank Account',
-        category: headerMap.category!=null && row[headerMap.category] ? row[headerMap.category] : 'Other',
-        description: headerMap.description!=null ? (row[headerMap.description]||'') : '',
-        paid_to: headerMap.paid_to!=null ? (row[headerMap.paid_to]||'') : '',
-        amount_kes: amount, charges_kes: charges,
-        owner_funded: ownerRaw==='Y'||ownerRaw==='YES'||ownerRaw==='TRUE'
+        id: uid(), date: row.date, txn_ref: row.source_ref,
+        account_used: row.account_used || 'Bank Account', category: row.category || 'Other',
+        description: row.description, paid_to: row.paid_to,
+        amount_kes: row.amount_kes, charges_kes: row.charges_kes,
+        owner_funded: row.owner_funded
       });
-      seenRefs.add(txn_ref.toLowerCase());
-      imported++;
+      seenRefs.add(row.source_ref.toLowerCase());
     }
-    // Insert in date order, oldest first -- matches how the original spreadsheet was arranged
-    newRows.sort((a,b)=>a.date<b.date?-1:1);
 
-    // Send the whole batch through the bulk import endpoint rather than
-    // letting the generic background sync create them one at a time ” this
-    // re-checks duplicates server-side too (catches anything imported by
-    // someone else since this session loaded) and reports exactly what it
-    // skipped and why.
+    // Insert in date order, oldest first
+    newRows.sort((a, b) => (a.date < b.date ? -1 : 1));
+
     let confirmedRows = [];
     if(newRows.length){
-      if(statusEl) statusEl.innerHTML = `<span class="hint">Saving ${newRows.length} rows¦</span>`;
+      if(statusEl) statusEl.innerHTML = `<span class="hint">Saving ${newRows.length} rows…</span>`;
       try{
         const entries = newRows.map(CORE_ENTITY_CONFIG.expenses.toApi);
         const apiResult = await apiCreate('/api/expenses', { branch_id: state.branchId, entries });
-        const insertedIds = new Set((apiResult.inserted||[]).map(x=>x.id));
-        confirmedRows = newRows.filter(r=>insertedIds.has(r.id));
-        for(const skip of (apiResult.skipped||[])){
+        const insertedIds = new Set((apiResult.inserted || []).map(x => x.id));
+        confirmedRows = newRows.filter(r => insertedIds.has(r.id));
+        
+        for(const skip of (apiResult.skipped || [])){
           skippedDupe++;
           errors.push(skip.reason || 'A row was skipped by the server.');
         }
       }catch(err){
-        importResult = {imported:0, skippedDupe, skippedInvalid, errors:[...errors, 'Save failed: '+err.message]};
-        if(statusEl) statusEl.innerHTML='';
+        importResult = { imported: 0, skippedDupe, skippedInvalid, errors: [...errors, 'Save failed: ' + err.message] };
+        if(statusEl) statusEl.innerHTML = '';
         render();
         ev.target.value = '';
         return;
       }
     }
+
     state.expenses = state.expenses.concat(confirmedRows);
-    // Keep the sync snapshot in step so the debounced background save
-    // doesn't try to re-create rows that are already persisted.
-    if(lastSynced) lastSynced.expenses = JSON.parse(JSON.stringify(state.expenses));
-    importResult = {imported: confirmedRows.length, skippedDupe, skippedInvalid, errors};
+    if(typeof lastSynced !== 'undefined' && lastSynced){
+      lastSynced.expenses = JSON.parse(JSON.stringify(state.expenses));
+    }
+
+    importResult = { imported: confirmedRows.length, skippedDupe, skippedInvalid, errors };
     render();
-  } catch(err){
-    importResult = {imported:0, skippedDupe:0, skippedInvalid:0, errors:['Could not read this file: '+err.message]};
+  }catch(err){
+    importResult = { imported: 0, skippedDupe: 0, skippedInvalid: 0, errors: ['Could not read this file: ' + err.message] };
     render();
   }
   ev.target.value = '';
