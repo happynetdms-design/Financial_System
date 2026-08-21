@@ -457,11 +457,11 @@ function renderLogin(errMsg, mode='login', noticeMsg=''){
     try{
       if(isSignup){
         const result = await apiSignup(fd.get('email'), fd.get('password'));
-        if(result.access_token) await startApp();
+        if(result.access_token) window.location.replace('/');
         else renderLogin(null, 'login', 'Account created. Check your email to confirm your address, then sign in.');
       } else {
         await apiLogin(fd.get('email'), fd.get('password'), fd.get('remember') === 'on');
-        await startApp();
+        window.location.replace('/');
       }
     }catch(err){
       renderLogin(err.message, mode);
@@ -498,13 +498,23 @@ async function startApp(){
   try{
     await loadState();
   }catch(e){
-    renderLogin(e.message || 'Your session expired ” please sign in again.');
+    if(getSession()) renderLogin('Could not load your account. Please try again.');
     return;
   }
   render();
 }
 
 (async function boot(){
+  if(window.location.pathname === '/profile'){
+    if(!getSession()){ window.location.replace('/'); return; }
+    await startProfileApp();
+    return;
+  }
+  if(window.location.pathname === '/admin'){
+    if(!getSession()){ window.location.replace('/'); return; }
+    await startAdminApp();
+    return;
+  }
   const s = getSession();
   if(!s){
     const oauthHandled = await handleOAuthCallback();

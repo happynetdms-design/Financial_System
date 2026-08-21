@@ -15,6 +15,8 @@
     '05-assistant-staff.js',
     '06-state.js',
     '07-business-logic.js',
+    'profile.js',
+    'admin.js',
     '08-control-center.js',
     '09-views.js',
     '10-wiring-boot.js'

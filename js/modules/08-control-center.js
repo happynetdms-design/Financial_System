@@ -272,7 +272,8 @@ function render(){
   let d = null;
   try{ d = dashboardData(); }catch(e){ d = null; }
   const tabs = visibleTabs();
-  r.innerHTML = `
+  const impersonation = (() => { try { return JSON.parse(sessionStorage.getItem('happynet_impersonation') || 'null'); } catch(e) { return null; } })();
+  r.innerHTML = `${impersonation ? `<div style="position:fixed;top:0;left:0;right:0;z-index:9998;background:#8d2f2f;color:#fff;padding:10px 16px;text-align:center">Impersonating ${execEsc(impersonation.targetEmail)} — <button class="btn ghost sm" id="btn-exit-impersonation">Exit impersonation</button></div>` : ''}
     <div class="app">
       <div class="sidebar no-print">
         <div class="brand">
@@ -315,7 +316,7 @@ function render(){
           <div class="profile-chip">
             <div class="profile-avatar">${(currentUserEmail||'?').charAt(0).toUpperCase()}</div>
             <div class="profile-info">
-              <div class="profile-email">${currentUserEmail||''}</div>
+              <a class="profile-email" href="/profile">${currentUserEmail||''}</a>
               <div class="profile-role">${state && state.role ? state.role.replace(/_/g,' ') : ''}</div>
             </div>
             <button id="btn-sign-out" title="Sign out">${ic('logout',16)}</button>
@@ -331,6 +332,10 @@ function render(){
   if(branchSelect) branchSelect.addEventListener('change', ()=> switchBranch(branchSelect.value));
   const signOutBtn = document.getElementById('btn-sign-out');
   if(signOutBtn) signOutBtn.addEventListener('click', async ()=>{ await apiLogout(); location.reload(); });
+  document.getElementById('btn-exit-impersonation')?.addEventListener('click', () => {
+    try { const handoff = JSON.parse(sessionStorage.getItem('happynet_impersonation') || 'null'); if(handoff?.originalSession) setSession(handoff.originalSession, true); } catch(e) { /* clear below */ }
+    sessionStorage.removeItem('happynet_impersonation'); window.location.replace('/');
+  });
   renderSaveBadge();
   renderMain();
 }

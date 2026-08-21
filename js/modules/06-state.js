@@ -390,18 +390,27 @@ let availableBranches = [];
 
 async function loadState(preferredBranchId){
   const me = await apiGetMe();
-  if(!me.branches || me.branches.length === 0){
-    throw new Error('Your account has no branch access yet ” ask an admin to grant you access.');
+  availableBranches = me.branches || [];
+  if(availableBranches.length === 0){
+    const empty = defaultState();
+    state = {
+      ...empty,
+      dailyRevenue: [], expenses: [], loans: [], loanPayments: [], taxObligations: [],
+      monthlyArchive: [], closedMonths: [], allBranches: [], branchId: null,
+      role: me.role || 'viewer', isHeadOffice: !!me.is_head_office
+    };
+    lastSynced = snapshotCore();
+    return;
   }
-  availableBranches = me.branches;
   const lastUsed = localStorage.getItem('happynet_last_branch');
   const branch = availableBranches.find(b => b.branch_id === preferredBranchId)
     || availableBranches.find(b => b.branch_id === lastUsed)
     || availableBranches[0];
   const branchId = branch.branch_id;
+  const sessionRole = getSession()?.user?.role;
   localStorage.setItem('happynet_last_branch', branchId);
 
-  const [revRes, expRes, loanRes, payRes, taxRes, settingsRaw, miscData] = await Promise.all([
+  const results = await Promise.allSettled([
     apiList('/api/revenue', branchId),
     apiList('/api/expenses', branchId),
     apiList('/api/loans', branchId),
@@ -410,12 +419,16 @@ async function loadState(preferredBranchId){
     apiFetch('/api/settings?branch_id=' + branchId, { method:'GET' }).then(r => r.json()),
     apiGetBranchMisc(branchId)
   ]);
+  const valueOr = (index, fallback) => results[index].status === 'fulfilled' ? results[index].value : fallback;
+  const revRes = valueOr(0, {}), expRes = valueOr(1, {}), loanRes = valueOr(2, {});
+  const payRes = valueOr(3, {}), taxRes = valueOr(4, {}), settingsRaw = valueOr(5, {});
+  const miscData = valueOr(6, {});
 
   const d = defaultState(); // used only as a fallback shape now, not seed data
 
   state = {
     branchId,
-    role: branch.role,
+    role: sessionRole || branch.role,
     isHeadOffice: !!me.is_head_office,
     allBranches: availableBranches,
     dailyRevenue: (revRes.revenue || []).map(r => ({ id:r.id, date:r.entry_date, revenue_kes:Number(r.amount_kes), notes:r.notes || '' })),

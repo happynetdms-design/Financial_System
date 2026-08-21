@@ -158,6 +158,27 @@ function rowsToObjects(rows){
     const o={}; headers.forEach((h,i)=>o[h]=r[i]??''); return o;
   });
 }
+function validateImportRows(source, rows){
+  const refs = new Set(), duplicateRefs = [], missing = [];
+  rows.forEach((row, index) => {
+    const ref = String(row.source_ref || '').trim();
+    const date = String(row.date_initiated || row.completion_time || '').trim();
+    if(!ref || !date) missing.push(index + 2);
+    if(ref && refs.has(ref)) duplicateRefs.push(ref);
+    if(ref) refs.add(ref);
+  });
+  return { source, total: rows.length, duplicateRefs, missingRows: missing };
+}
+function showImportSummary(report){
+  return new Promise(resolve => {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:#17212b99;z-index:10000;display:grid;place-items:center;padding:20px';
+    modal.innerHTML = `<div class="form-card" style="max-width:560px;width:100%;background:#fff"><h2>Import Summary</h2><p>Total rows: <b>${report.total}</b></p><p>Duplicate references: <b>${report.duplicateRefs.length}</b></p><p>Rows missing required reference/date: <b>${report.missingRows.length}</b>${report.missingRows.length ? ` (${report.missingRows.slice(0,10).join(', ')})` : ''}</p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" data-summary-cancel>Cancel</button><button class="btn gold" data-summary-continue ${report.missingRows.length ? 'disabled' : ''}>Continue</button></div></div>`;
+    document.body.appendChild(modal);
+    modal.querySelector('[data-summary-cancel]').onclick = () => { modal.remove(); resolve(false); };
+    modal.querySelector('[data-summary-continue]').onclick = () => { modal.remove(); resolve(true); };
+  });
+}
 function parseTendeCSV(text){
   return rowsToObjects(parseCSVRobust(text)).map(r=>({
     source_ref:r['REF'], ref:r['REF'], date_initiated:r['DATE INITIATED'],
@@ -193,6 +214,7 @@ async function handleFinancialImportFiles(files){
       } else if(lower.includes('tende') || text.includes('DATE INITIATED') && text.includes('SERVICE')) {
         source='tende'; rows=parseTendeCSV(text);
       } else throw new Error(`${file.name}: unsupported financial export.`);
+      if(!await showImportSummary(validateImportRows(source, rows))) throw new Error('Import cancelled.');
       const r=await importFinancialSource(source,file.name,rows);
       reports.push(`${file.name}: ${r.created.length} posted, ${r.skipped.length} duplicate/skipped, ${r.review.length} held for review, ${r.errors.length} errors`);
     }

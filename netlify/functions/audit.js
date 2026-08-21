@@ -15,14 +15,14 @@ exports.handler = async (event) => {
     }
 
     const { table_name, record_id, limit } = event.queryStringParameters || {};
-    let q = admin.from('audit_log').select('*');
-    if(table_name) q = q.eq('table_name', table_name);
-    if(record_id) q = q.eq('record_id', record_id);
-    q = q.order('changed_at', { ascending: false }).limit(Math.min(Number(limit) || 200, 1000));
+    let q = admin.from('audit_logs').select('*');
+    if(table_name) q = q.eq('metadata->>table_name', table_name);
+    if(record_id) q = q.eq('metadata->>record_id', record_id);
+    q = q.order('created_at', { ascending: false }).limit(Math.min(Number(limit) || 200, 1000));
 
     const { data, error: dbErr } = await q;
     if(dbErr) return json(500, { error: dbErr.message });
-    return json(200, { audit_log: data });
+    return json(200, { audit_log: data || [] });
   }catch(e){
     console.error('audit error', e);
     return json(500, { error: 'Unexpected error loading the audit log.' });

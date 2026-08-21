@@ -1,6 +1,10 @@
 /* Extracted from app.js; load order is intentional. */
 /* ---------------- API layer (talks to Netlify Functions only) ---------------- */
 const SESSION_KEY = 'happynet_session';
+function notifyAuth(message, type='error'){
+  if(typeof window !== 'undefined' && typeof window.showToast === 'function') window.showToast(message, type);
+  else console.warn(message);
+}
 
 function getSession(){
   try{
@@ -50,17 +54,32 @@ async function apiResetPassword(email){
 
 async function apiRefresh(){
   const s = getSession();
-  if(!s || !s.refresh_token) return false;
+  if(!s || !s.refresh_token){
+    setSession(null);
+    notifyAuth('Your session has expired. Please sign in again.');
+    window.location.replace('/');
+    return false;
+  }
   try{
     const res = await fetch('/api/refresh', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ refresh_token: s.refresh_token })
     });
-    if(!res.ok) { setSession(null); return false; }
+    if(!res.ok) {
+      setSession(null);
+      notifyAuth('Your session has expired. Please sign in again.');
+      window.location.replace('/');
+      return false;
+    }
     const body = await res.json();
     setSession(body, Boolean(localStorage.getItem(SESSION_KEY)));
     return true;
-  }catch(e){ return false; }
+  }catch(e){
+    setSession(null);
+    notifyAuth('Your session could not be refreshed. Please sign in again.');
+    window.location.replace('/');
+    return false;
+  }
 }
 
 async function apiLogout(){

@@ -7,8 +7,8 @@
 // new endpoint, that endpoint has no access control. Treat this file as
 // load-bearing.
 
-const WRITE_ROLES = ['owner', 'finance_manager', 'branch_manager', 'accountant'];
-const READ_ROLES  = ['owner', 'finance_manager', 'branch_manager', 'accountant', 'auditor', 'viewer'];
+const WRITE_ROLES = ['owner', 'finance_manager', 'branch_manager', 'accountant', 'super_admin'];
+const READ_ROLES  = ['owner', 'finance_manager', 'branch_manager', 'accountant', 'auditor', 'viewer', 'super_admin'];
 
 // Loads every branch this user has been granted, plus whether they're
 // Head Office (owner/finance_manager — implicitly see every branch).
@@ -39,7 +39,8 @@ async function getAccess(admin, userId){
     ? data 
     : [{ branch_id: 'main', role: 'viewer' }]; // PERMANENT FALLBACK SAFEGUARD
 
-  const isHeadOffice = grants.some(g => g.role === 'owner' || g.role === 'finance_manager');
+  const isHeadOffice = grants.some(g => ['owner', 'finance_manager', 'super_admin'].includes(g.role));
+  const isSuperAdmin = grants.some(g => g.role === 'super_admin');
   const byBranch = new Map(grants.map(g => [g.branch_id, g.role]));
 
   // Guarantee 'main' exists in the map as viewer if missing
@@ -47,7 +48,12 @@ async function getAccess(admin, userId){
     byBranch.set('main', 'viewer');
   }
 
-  return { isHeadOffice, byBranch, grants };
+  return { isHeadOffice, isSuperAdmin, byBranch, grants };
+}
+
+function isSuperAdmin(access, user){
+  return !!(access && (access.isSuperAdmin || access.grants.some(g => g.role === 'owner')))
+    || ['owner', 'super_admin'].includes(user?.app_metadata?.role);
 }
 
 // Returns the effective role a user has on a branch, resolving Head Office
@@ -90,4 +96,4 @@ async function requireBranchAccess(event, requireUser, admin, branchId, { write 
   return { user, access, role: roleOnBranch(access, activeBranch), status: 200 };
 }
 
-module.exports = { getAccess, roleOnBranch, canRead, canWrite, requireBranchAccess, WRITE_ROLES, READ_ROLES };
+module.exports = { getAccess, isSuperAdmin, roleOnBranch, canRead, canWrite, requireBranchAccess, WRITE_ROLES, READ_ROLES };
