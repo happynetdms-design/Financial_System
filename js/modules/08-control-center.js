@@ -173,7 +173,7 @@ const TAB_GROUPS = [
   {
     section: 'Operations',
     tabs: [
-      {id:'control',label:'Controls',icon:'shield'},
+      {id:'control',label:'Controls',icon:'controls'},
       {id:'production_controls',label:'Production',icon:'gear'},
       {id:'automation',label:'Automation',icon:'sparkles'}
     ]
