@@ -111,21 +111,20 @@ exports.handler = async event => {
       if (source === 'organization_utility') {
         const status = String(r.transaction_status || r['Transaction Status'] || '').toLowerCase();
         const details = String(r.details || r.Details || '');
-        const withdrawn = asMoney(r.withdrawn || r.Withdrawn);
-        const isSettlement = /organization settlement account/i.test(details) && status === 'completed' && withdrawn > 0;
-        if (!isSettlement) { result.review.push({ ref, reason: 'Utility row not an organization settlement; not posted as revenue', row: r }); continue; }
+        const amount = asMoney(r.amount || r.amount_kes || r.paid_in || r.withdrawn || r.PaidIn || r.Withdrawn);
+        if (!amount) { result.review.push({ ref, reason: 'Utility row has no valid Paid In or Withdrawn amount', row: r }); continue; }
         const date = isoDate(r.completion_time || r['Completion Time']);
         const accountId = await getAccount(admin, branchId, 'Organization Utility Account', 'other');
         const categoryId = await getCategory(admin, branchId, 'Internet Service Revenue', 'revenue');
         const rev = await admin.from('revenue_entries').insert({
           branch_id: branchId, entry_date: date, account_id: accountId, category_id: categoryId,
-          amount_kes: withdrawn, notes: `Organization utility settlement ${ref}`,
+          amount_kes: amount, notes: `Organization utility transaction ${ref}`,
           source: 'organization_utility', created_by: ctx.user.id
         }).select().maybeSingle();
         if (rev.error) throw new Error(rev.error.message);
         tx = {
           branch_id: branchId, transaction_date: date, transaction_type: 'revenue', direction: 'in',
-          gross_amount_kes: withdrawn, charges_kes: 0, net_amount_kes: withdrawn, account_id: accountId,
+          gross_amount_kes: amount, charges_kes: 0, net_amount_kes: amount, account_id: accountId,
           category_id: categoryId, revenue_entry_id: rev.data.id, import_batch_id: batchId,
           source_system: source, source_ref: ref, external_ref: r.linked_transaction_id || null,
           counterparty: r.other_party_info || null, description: details, source_status: status,
@@ -141,7 +140,7 @@ exports.handler = async event => {
         const remark = String(r.remark || r.REMARK || '');
         const name = String(r.name || r.NAME || '');
         const counterparty = String(r.receiver || r.RECEIVER || r.name || r.NAME || '');
-        const isIncoming = service === 'INCOMING';
+        const isIncoming = ['INCOMING', 'RCV_TENDE'].includes(service) || /incoming|received|receive|rcv/i.test(`${service} ${remark}`);
         const lenderIsJohn = /\bJOHN\b/i.test(`${remark} ${name} ${r.status_message || r['STATUS MESSAGE'] || ''}`);
         
         if (isIncoming) {
@@ -156,7 +155,7 @@ exports.handler = async event => {
             source_system: source, source_ref: ref, external_ref: r.ref_no || r['REF NO'] || null, counterparty: lenderIsJohn ? 'John' : (name || 'John'),
             description: remark || `Owner loan funding${lenderIsJohn ? ' from John' : ''}`, source_status: status, raw_data: r, created_by: ctx.user.id
           };
-        } else if (!isIncoming) {
+        } else if (['BUYGOODS', 'SEND M-PESA', 'SND_TENDE'].includes(service)) {
           const accountId = await getAccount(admin, branchId, 'Tende Operating Account', 'other');
           const categoryName = remark || 'Tende Expense';
           const categoryId = await getCategory(admin, branchId, categoryName, 'expense');

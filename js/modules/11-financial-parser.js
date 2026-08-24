@@ -71,6 +71,90 @@
     if(/tende|service|date initiated/.test(hint)) return 'tende';
     return type || 'expense';
   }
+  function csvGrid(text){
+    const grid = []; let row = []; let field = ''; let quoted = false;
+    const input = String(text || '').replace(/^\uFEFF/, '');
+    for(let index = 0; index < input.length; index++){
+      const character = input[index];
+      if(quoted){
+        if(character === '"' && input[index + 1] === '"'){ field += '"'; index++; }
+        else if(character === '"') quoted = false;
+        else field += character;
+      }else if(character === '"') quoted = true;
+      else if(character === ','){ row.push(field); field = ''; }
+      else if(character === '\n'){ row.push(field.replace(/\r$/, '')); grid.push(row); row = []; field = ''; }
+      else field += character;
+    }
+    if(field || row.length) { row.push(field); grid.push(row); }
+    return grid;
+  }
+  function csvObjects(grid, headerIndex){
+    const headers = (grid[headerIndex] || []).map(cleanHeader);
+    return grid.slice(headerIndex + 1).filter(row => row.some(value => String(value ?? '').trim() !== '')).map(row => {
+      const object = {};
+      headers.forEach((header, index) => { if(header) object[header] = cleanValue(row[index]); });
+      return object;
+    });
+  }
+  function csvField(row, ...names){
+    for(const name of names){
+      const value = row[cleanHeader(name)];
+      if(value !== undefined && String(value).trim() !== '') return value;
+    }
+    return '';
+  }
+  function csvTransaction(id, source, date, reference, description, amount, charge, treatment, status){
+    return { id: reference || id, source, date: String(date || '').trim(), reference: reference || id,
+      description: String(description || '').trim(), amount: Math.abs(numberValue(amount) || 0),
+      charge: Math.abs(numberValue(charge) || 0), systemTreatment: treatment, rawStatus: String(status || '').trim() };
+  }
+  window.parseFinancialDataFiles = function(tendeCsvContent, utilityCsvContent){
+    const transactions = [];
+    if(tendeCsvContent){
+      const grid = csvGrid(tendeCsvContent);
+      const headerIndex = grid.findIndex(row => row.some(value => cleanHeader(value) === 'date initiated'));
+      if(headerIndex >= 0){
+        csvObjects(grid, headerIndex).forEach((row, index) => {
+          const date = csvField(row, 'DATE INITIATED', 'DATE APPROVED');
+          const reference = String(csvField(row, 'REF', 'REF NO') || `TENDE-${index}`).trim();
+          const service = String(csvField(row, 'SERVICE')).trim().toUpperCase();
+          const status = csvField(row, 'STATUS');
+          const treatment = ['BUYGOODS', 'SEND M-PESA', 'SND_TENDE'].includes(service)
+            ? 'Expense + charge'
+            : ['RCV_TENDE', 'INCOMING'].includes(service) ? 'John / Owner loan funding' : 'Review queue';
+          const amount = numberValue(csvField(row, 'AMOUNT'));
+          if(date && amount !== null){
+            const transaction = csvTransaction(`TENDE-${index}`, 'Tende', date, reference,
+              csvField(row, 'REMARK', 'NAME') || `${service} payment`, amount,
+              csvField(row, 'CHARGE'), treatment, status);
+            transaction.service = service;
+            transactions.push(transaction);
+          }
+        });
+      }
+    }
+    if(utilityCsvContent){
+      const grid = csvGrid(utilityCsvContent);
+      const headerIndex = grid.findIndex(row => {
+        const headers = row.map(cleanHeader);
+        return headers.includes('receipt no.') || (headers.includes('completion time') && headers.includes('paid in') && headers.includes('withdrawn'));
+      });
+      if(headerIndex >= 0){
+        csvObjects(grid, headerIndex).forEach((row, index) => {
+          const date = csvField(row, 'Completion Time', 'Initiation Time');
+          const reference = String(csvField(row, 'Receipt No.') || `UTIL-${index}`).trim();
+          const paidIn = numberValue(csvField(row, 'Paid In'));
+          const withdrawn = numberValue(csvField(row, 'Withdrawn'));
+          const amount = paidIn !== null && paidIn !== 0 ? paidIn : withdrawn;
+          if(date && amount !== null){
+            transactions.push(csvTransaction(`UTIL-${index}`, 'Organization Utility', date, reference,
+              csvField(row, 'Details'), amount, 0, 'Revenue', csvField(row, 'Transaction Status')));
+          }
+        });
+      }
+    }
+    return transactions;
+  };
   window.parseFinancialExport = async function(file, type = 'expense'){
     if(!window.XLSX) throw new Error('Spreadsheet reader is unavailable. Reload the page and try again.');
     const workbook = window.XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });

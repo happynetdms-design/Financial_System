@@ -201,7 +201,25 @@ async function handleFinancialImportFiles(files){
   const reports=[];
   try{
     for(const file of files){
-      const parsed = await parseFinancialExport(file, 'financial');
+      let parsed;
+      if(/\.csv$/i.test(file.name) && typeof window.parseFinancialDataFiles === 'function'){
+        const utilityFile = /utility|org_/i.test(file.name);
+        const transactions = window.parseFinancialDataFiles(utilityFile ? undefined : await file.text(), utilityFile ? await file.text() : undefined);
+        const csvSource = utilityFile ? 'organization_utility' : 'tende';
+        parsed = {
+          source: csvSource, rows: transactions.filter(transaction => transaction.source === (utilityFile ? 'Organization Utility' : 'Tende')).map(transaction => utilityFile ? ({
+            source_ref: transaction.reference, receipt_no: transaction.reference, completion_time: transaction.date,
+            details: transaction.description, transaction_status: transaction.rawStatus, paid_in: transaction.amount,
+            withdrawn: transaction.amount, system_treatment: transaction.systemTreatment
+          }) : ({
+            source_ref: transaction.reference, ref: transaction.reference, date_initiated: transaction.date,
+            service: transaction.service || '', amount: transaction.amount, charge: transaction.charge, remark: transaction.description,
+            status: transaction.rawStatus, system_treatment: transaction.systemTreatment
+          })), skipped: []
+        };
+      }else{
+        parsed = await parseFinancialExport(file, 'financial');
+      }
       const source = parsed.source;
       if(!['tende', 'organization_utility'].includes(source)) throw new Error(`${file.name}: could not identify a supported financial export.`);
       const summary = validateImportRows(source, parsed.rows);
