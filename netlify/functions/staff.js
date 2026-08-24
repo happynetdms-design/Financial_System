@@ -66,11 +66,35 @@ exports.handler = async (event) => {
       const matchedUser = await findUserByEmail(admin, email);
       if(!matchedUser) return json(404, { error: `No account exists for ${email} yet — create it in Supabase → Authentication → Users first.` });
 
-      const { data: grant, error: grantErr } = await admin
+      const { data: existing, error: existingErr } = await admin
         .from('user_branch_access')
-        .upsert({ user_id: matchedUser.id, branch_id, role, granted_by: user.id }, { onConflict: 'user_id,branch_id' })
-        .select().maybeSingle();
-      if(grantErr) return json(500, { error: grantErr.message });
+        .select('user_id, branch_id, role, granted_by')
+        .eq('user_id', matchedUser.id)
+        .eq('branch_id', branch_id)
+        .maybeSingle();
+      if(existingErr) return json(500, { error: existingErr.message });
+
+      let grant;
+      if(existing){
+        const { data, error: updateErr } = await admin
+          .from('user_branch_access')
+          .update({ role, granted_by: user.id })
+          .eq('user_id', matchedUser.id)
+          .eq('branch_id', branch_id)
+          .select('user_id, branch_id, role, granted_by, granted_at')
+          .maybeSingle();
+        if(updateErr) return json(500, { error: updateErr.message });
+        grant = data;
+      }else{
+        const { data, error: insertErr } = await admin
+          .from('user_branch_access')
+          .insert({ user_id: matchedUser.id, branch_id, role, granted_by: user.id })
+          .select('user_id, branch_id, role, granted_by, granted_at')
+          .maybeSingle();
+        if(insertErr) return json(500, { error: insertErr.message });
+        grant = data;
+      }
+
       return json(201, { grant: { ...grant, email: matchedUser.email } });
     }
 

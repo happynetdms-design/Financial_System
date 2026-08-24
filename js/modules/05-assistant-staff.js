@@ -101,13 +101,17 @@ async function createBranch(name, code){
 }
 async function grantAccess(email, branchId, role){
   staffState.formError = null;
+  staffState.loading = true;
+  render();
   try{
     const res = await apiFetch('/api/staff', { method:'POST', headers: JSONH, body: JSON.stringify({ email, branch_id: branchId, role }) });
     const body = await res.json();
     if(!res.ok) throw new Error(body.error || 'Could not grant access.');
     await loadStaffData();
   }catch(e){
-    staffState.formError = e.message; render();
+    staffState.formError = e.message;
+    staffState.loading = false;
+    render();
   }
 }
 async function revokeAccess(userId, branchId){
