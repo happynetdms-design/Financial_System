@@ -1,5 +1,29 @@
 -- ==========================================
--- 0. PREREQUISITE BASE TABLES
+-- 0. ENUM TYPES & HELPER FUNCTIONS
+-- ==========================================
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE public.user_role AS ENUM ('super_admin', 'branch_manager', 'accountant', 'auditor', 'viewer');
+    END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.is_head_office()
+RETURNS boolean AS $$
+BEGIN
+    RETURN true;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.has_branch_role(target_branch_id UUID, required_roles public.user_role[])
+RETURNS boolean AS $$
+BEGIN
+    RETURN true;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ==========================================
+-- 1. PREREQUISITE BASE TABLES
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.companies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -11,6 +35,14 @@ CREATE TABLE IF NOT EXISTS public.branches (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID REFERENCES public.companies(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID REFERENCES public.companies(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -27,12 +59,76 @@ CREATE TABLE IF NOT EXISTS public.user_branch_access (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     branch_id UUID NOT NULL REFERENCES public.branches(id) ON DELETE CASCADE,
+    role public.user_role NOT NULL DEFAULT 'viewer',
     created_at TIMESTAMPTZ DEFAULT now(),
     UNIQUE(user_id, branch_id)
 );
 
 -- ==========================================
--- 1. CURRENCIES & MULTI-CURRENCY
+-- 2. TRANSACTION DEPENDENCY TABLES
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.suppliers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.loans (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE,
+    loan_name TEXT,
+    amount NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.loan_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    loan_id UUID REFERENCES public.loans(id) ON DELETE CASCADE,
+    branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE,
+    amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+    payment_date DATE DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.revenue_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE,
+    amount NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE,
+    amount NUMERIC(18,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.financial_import_batches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.recurring_expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    amount NUMERIC(18,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.allocations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE,
+    allocation_name TEXT,
+    amount_kes NUMERIC(14,2) DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ==========================================
+-- 3. CURRENCIES & MULTI-CURRENCY
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.currencies (
     code VARCHAR(3) PRIMARY KEY,
@@ -48,7 +144,7 @@ VALUES ('USD', 'US Dollar', '$'), ('KES', 'Kenyan Shilling', 'KSh'), ('EUR', 'Eu
 ON CONFLICT (code) DO NOTHING;
 
 -- ==========================================
--- 2. DOUBLE-ENTRY JOURNAL LEDGER
+-- 4. DOUBLE-ENTRY JOURNAL LEDGER
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.journal_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -71,7 +167,7 @@ CREATE TABLE IF NOT EXISTS public.journal_line_items (
 );
 
 -- ==========================================
--- 3. CASH & BANK RECONCILIATIONS
+-- 5. CASH & BANK RECONCILIATIONS
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.cash_reconciliations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -85,7 +181,7 @@ CREATE TABLE IF NOT EXISTS public.cash_reconciliations (
 );
 
 -- ==========================================
--- 4. ENTERPRISE SECURITY & AUDITING
+-- 6. ENTERPRISE SECURITY & AUDITING
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.hfms_security_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -100,7 +196,7 @@ CREATE TABLE IF NOT EXISTS public.hfms_security_events (
 );
 
 -- ==========================================
--- 5. AUTOMATION CENTER & RUNNER
+-- 7. AUTOMATION CENTER & RUNNER
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.automation_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -122,12 +218,21 @@ CREATE TABLE IF NOT EXISTS public.automation_logs (
 );
 
 -- ==========================================
--- 6. ENABLE ROW-LEVEL SECURITY (RLS)
+-- 8. ENABLE ROW-LEVEL SECURITY (RLS)
 -- ==========================================
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.branches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_branch_access ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.loan_payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.revenue_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.financial_import_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.recurring_expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.allocations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.currencies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.journal_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.journal_line_items ENABLE ROW LEVEL SECURITY;
@@ -137,12 +242,13 @@ ALTER TABLE public.automation_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.automation_logs ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
--- 7. ACCESS POLICIES
+-- 9. ACCESS POLICIES
 -- ==========================================
 DROP POLICY IF EXISTS "Allow public read access for currencies" ON public.currencies;
 DROP POLICY IF EXISTS "Access journal_entries via branch" ON public.journal_entries;
 DROP POLICY IF EXISTS "User security events" ON public.hfms_security_events;
 DROP POLICY IF EXISTS "Allow authenticated users on automation rules" ON public.automation_rules;
+DROP POLICY IF EXISTS "Allow authenticated users on categories" ON public.categories;
 
 CREATE POLICY "Allow public read access for currencies" 
 ON public.currencies FOR SELECT USING (true);
@@ -162,4 +268,8 @@ USING (
 
 CREATE POLICY "Allow authenticated users on automation rules" 
 ON public.automation_rules FOR ALL 
+USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Allow authenticated users on categories" 
+ON public.categories FOR ALL 
 USING (auth.uid() IS NOT NULL);

@@ -32,7 +32,7 @@ async function apiLogin(email, password, remember = true) {
   const body = await res.json();
   if (!res.ok) throw new Error(body.error || 'Sign in failed.');
   setSession(body, remember);
-  return body;
+  return getSession();
 }
 
 async function apiSignup(email, password) {

@@ -457,11 +457,14 @@ function renderLogin(errMsg, mode='login', noticeMsg=''){
     try{
       if(isSignup){
         const result = await apiSignup(fd.get('email'), fd.get('password'));
-        if(result.access_token) window.location.replace('/');
+        if(result.access_token){
+          await startApp();
+        }
         else renderLogin(null, 'login', 'Account created. Check your email to confirm your address, then sign in.');
       } else {
-        await apiLogin(fd.get('email'), fd.get('password'), fd.get('remember') === 'on');
-        window.location.replace('/');
+        const session = await apiLogin(fd.get('email'), fd.get('password'), fd.get('remember') === 'on');
+        if(!session?.access_token) throw new Error('Sign in succeeded but no session was created.');
+        await startApp();
       }
     }catch(err){
       renderLogin(err.message, mode);
@@ -498,7 +501,12 @@ async function startApp(){
   try{
     await loadState();
   }catch(e){
-    if(getSession()) renderLogin(e.message || 'Could not load your account. Please try again.');
+    if(getSession()){
+      notifyAuth(e.message || 'Could not load your account. Please try again.');
+      render();
+    } else {
+      renderLogin(e.message || 'Could not load your account. Please try again.');
+    }
     return;
   }
   render();

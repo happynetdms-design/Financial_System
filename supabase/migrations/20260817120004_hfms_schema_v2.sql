@@ -1,18 +1,18 @@
 -- ============================================================================
--- HAPPYNET FINANCIAL MANAGEMENT SYSTEM (HFMS) — Phase 1 Schema
+-- HAPPYNET FINANCIAL MANAGEMENT SYSTEM (HFMS) â€” Phase 1 Schema
 -- ----------------------------------------------------------------------------
 -- PURPOSE
 -- Replaces the single-row JSON store (public.app_state) with a normalized
 -- relational model, without touching the running app until you're ready to
--- cut over. Run this alongside the existing schema — it does NOT drop
+-- cut over. Run this alongside the existing schema â€” it does NOT drop
 -- app_state. A migration block at the bottom copies existing data across.
 --
 -- HOW TO APPLY
---   1. Supabase Dashboard → SQL Editor → paste this whole file → Run.
+--   1. Supabase Dashboard â†’ SQL Editor â†’ paste this whole file â†’ Run.
 --   2. Verify row counts (queries at the very bottom of this file).
 --   3. Only after the frontend/Netlify Functions are rewritten to read from
 --      the new tables (Phase 2) should app_state be retired. Until then,
---      both can coexist safely — nothing here alters app_state.
+--      both can coexist safely â€” nothing here alters app_state.
 --
 -- SCOPE OF THIS FILE
 --   - Companies / branches (multi-branch from day one, per the brief)
@@ -83,13 +83,13 @@ create table if not exists public.user_branch_access (
 );
 
 -- Helper: does the current JWT's user hold at least one of `roles` on `b_id`?
-create or replace function public.has_branch_role(b_id uuid, roles public.user_role[])
+create or replace function public.has_branch_role(target_branch_id uuid, required_roles public.user_role[])
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.user_branch_access uba
-    where uba.branch_id = b_id
+    where uba.branch_id = target_branch_id
       and uba.user_id = auth.uid()
-      and uba.role = any(roles)
+      and uba.role = any(required_roles)
   );
 $$;
 
@@ -185,12 +185,12 @@ create unique index if not exists uq_expenses_branch_txnref
   on public.expenses(branch_id, txn_ref) where txn_ref is not null and txn_ref <> '';
 
 -- ----------------------------------------------------------------------------
--- 6. PROFIT FIRST — SETTINGS + FULL HISTORY
+-- 6. PROFIT FIRST â€” SETTINGS + FULL HISTORY
 -- ----------------------------------------------------------------------------
 create table if not exists public.profit_first_settings (
   branch_id                          uuid primary key references public.branches(id) on delete cascade,
   -- Happynet's actual split is 4 buckets of total revenue (must sum to 100),
-  -- not the textbook 5-bucket model — matches state.settings in the live app.
+  -- not the textbook 5-bucket model â€” matches state.settings in the live app.
   pct_profit                         numeric(5,2) not null default 5,
   pct_owner_debt                     numeric(5,2) not null default 20,
   pct_tax                            numeric(5,2) not null default 15,
@@ -214,7 +214,7 @@ create table if not exists public.profit_first_settings_history (
   changed_at      timestamptz not null default now()
 );
 
--- Computed/approved allocations per period per bucket — this is the audit
+-- Computed/approved allocations per period per bucket â€” this is the audit
 -- trail the brief calls "allocation proof".
 create table if not exists public.allocations (
   id              uuid primary key default gen_random_uuid(),
@@ -285,7 +285,7 @@ create table if not exists public.tax_payments (
 );
 
 -- ----------------------------------------------------------------------------
--- 9. ATTACHMENTS (receipts / invoices — points at Supabase Storage objects)
+-- 9. ATTACHMENTS (receipts / invoices â€” points at Supabase Storage objects)
 -- ----------------------------------------------------------------------------
 create table if not exists public.attachments (
   id            uuid primary key default gen_random_uuid(),
@@ -410,10 +410,10 @@ create policy "audit read head office" on public.audit_log for select to authent
 -- user_branch_access) need the same read/write policy pairs, following the
 -- identical pattern above. Left for Phase 2 alongside the Netlify Functions
 -- rewrite, so policies can be tested against the real API layer rather than
--- guessed at in isolation — happy to fill these in as the next step.
+-- guessed at in isolation â€” happy to fill these in as the next step.
 
 -- ============================================================================
--- 12. MIGRATION — copy existing app_state.data (jsonb) into the new tables
+-- 12. MIGRATION â€” copy existing app_state.data (jsonb) into the new tables
 -- ----------------------------------------------------------------------------
 -- Safe to run multiple times against a fresh target (uses ON CONFLICT DO
 -- NOTHING / NOT EXISTS guards). Does NOT modify or delete app_state.
@@ -431,7 +431,7 @@ declare
 begin
   select data into v_state from public.app_state where id = 'happynet';
   if v_state is null then
-    raise notice 'No app_state row found — skipping migration.';
+    raise notice 'No app_state row found â€” skipping migration.';
     return;
   end if;
 
@@ -550,7 +550,7 @@ begin
 end $$;
 
 -- ----------------------------------------------------------------------------
--- VERIFICATION — run these after the migration block above and compare
+-- VERIFICATION â€” run these after the migration block above and compare
 -- counts against what you see in the current dashboard's tabs.
 -- ----------------------------------------------------------------------------
 -- select count(*) as revenue_rows   from public.revenue_entries;
