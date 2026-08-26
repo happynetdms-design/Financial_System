@@ -23,6 +23,19 @@ function setSession(s, remember = true) {
   if (s) (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(s));
 }
 
+// Redirect helper safely handles routing to the dashboard view
+function redirectToDashboard() {
+  if (typeof window.switchView === 'function') {
+    window.switchView('dashboard');
+  } else if (typeof window.renderDashboard === 'function') {
+    window.renderDashboard();
+  } else {
+    // Fallback: Reload to hash route so 10-wiring-boot.js resolves the UI
+    window.location.hash = '#dashboard';
+    window.location.reload();
+  }
+}
+
 async function apiLogin(email, password, remember = true) {
   const res = await fetch('/api/login', {
     method: 'POST',
@@ -33,6 +46,18 @@ async function apiLogin(email, password, remember = true) {
   if (!res.ok) throw new Error(body.error || 'Sign in failed.');
   setSession(body, remember);
   return getSession();
+}
+
+async function handleLogin(email, password, remember = true) {
+  try {
+    const session = await apiLogin(email, password, remember);
+    if (session) {
+      redirectToDashboard();
+    }
+  } catch (err) {
+    notifyAuth(err.message || 'Login failed.');
+    throw err;
+  }
 }
 
 async function apiSignup(email, password) {
@@ -100,6 +125,7 @@ async function apiLogout() {
     /* ignore - clear local session regardless */
   }
   setSession(null);
+  window.location.replace('/');
 }
 
 // Wraps fetch to /api/*: attaches bearer token & retries once after silent refresh
@@ -198,6 +224,7 @@ async function handleOAuthCallback() {
         });
 
         window.history.replaceState({}, document.title, window.location.pathname);
+        redirectToDashboard();
         return true;
       }
     }
@@ -247,6 +274,7 @@ if (typeof window !== 'undefined') {
     getSession,
     setSession,
     apiLogin,
+    handleLogin,
     apiSignup,
     apiResetPassword,
     apiRefresh,
@@ -257,6 +285,7 @@ if (typeof window !== 'undefined') {
     apiGetBranchMisc,
     apiSaveBranchMisc,
     handleOAuthCallback,
-    signInWithGoogle
+    signInWithGoogle,
+    redirectToDashboard
   });
 }
