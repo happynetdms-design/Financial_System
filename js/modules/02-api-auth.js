@@ -23,6 +23,14 @@ function setSession(s, remember = true) {
   if (s) (remember ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(s));
 }
 
+async function readApiBody(res, fallback) {
+  try {
+    return await res.json();
+  } catch (e) {
+    throw new Error(`${fallback} (HTTP ${res.status})`);
+  }
+}
+
 // Redirect helper safely handles routing to the dashboard view
 function redirectToDashboard() {
   if (typeof window.switchView === 'function') {
@@ -42,8 +50,11 @@ async function apiLogin(email, password, remember = true) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   });
-  const body = await res.json();
+  const body = await readApiBody(res, 'The sign-in service returned an invalid response.');
   if (!res.ok) throw new Error(body.error || 'Sign in failed.');
+  if (!body.access_token || !body.refresh_token || !body.user) {
+    throw new Error('Sign in succeeded but the server returned an incomplete session.');
+  }
   setSession(body, remember);
   return getSession();
 }
@@ -66,7 +77,7 @@ async function apiSignup(email, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
   });
-  const body = await res.json();
+  const body = await readApiBody(res, 'The account service returned an invalid response.');
   if (!res.ok) throw new Error(body.error || 'Account creation failed.');
   if (body.access_token) setSession(body, true);
   return body;
@@ -78,7 +89,7 @@ async function apiResetPassword(email) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email })
   });
-  const body = await res.json();
+  const body = await readApiBody(res, 'The password reset service returned an invalid response.');
   if (!res.ok) throw new Error(body.error || 'Unable to send password reset email.');
   return body;
 }
